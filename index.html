@@ -1,0 +1,4227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Practice Finance Pro - Complete Financial Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#3B82F6">
+    <meta name="description" content="Complete financial dashboard for medical practices with account group analysis">
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- External Dependencies -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-primary: #0F172A;
+            --bg-secondary: #1E293B;
+            --bg-tertiary: #334155;
+            --text-primary: #F1F5F9;
+            --text-secondary: #94A3B8;
+            --accent-primary: #3B82F6;
+            --accent-secondary: #10B981;
+            --accent-warning: #F59E0B;
+            --accent-danger: #EF4444;
+            --border-color: #475569;
+        }
+
+        .light-theme {
+            --bg-primary: #FFFFFF;
+            --bg-secondary: #F8FAFC;
+            --bg-tertiary: #F1F5F9;
+            --text-primary: #0F172A;
+            --text-secondary: #475569;
+            --border-color: #E2E8F0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+        }
+
+        .sidebar {
+            width: 280px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .main-content {
+            margin-left: 280px;
+            min-height: 100vh;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .nav-item.active {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .kpi-card {
+            padding: 20px;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+        }
+
+        .file-drop-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .file-drop-zone:hover, .file-drop-zone.dragover {
+            border-color: var(--accent-primary);
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s ease;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 12px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table th {
+            background: var(--bg-secondary);
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .data-table tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 12px 16px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 1000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+            }
+        }
+
+        @media print {
+            .sidebar, .no-print {
+                display: none !important;
+            }
+            .main-content {
+                margin-left: 0 !important;
+            }
+            .glass-card {
+                background: white !important;
+                border: 1px solid #E2E8F0 !important;
+                box-shadow: none !important;
+            }
+            body {
+                background: white !important;
+                color: black !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile Menu Button -->
+    <div class="md:hidden fixed top-4 left-4 z-50 no-print">
+        <button id="mobileMenuBtn" class="px-4 py-2 bg-gray-800 rounded-lg">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar glass-card no-print">
+        <div class="p-6 border-b border-gray-700">
+            <div class="flex items-center gap-3 mb-2">
+                <div class="w-10 h-10 rounded-lg bg-gradient-to-r from-blue-500 to-green-500 flex items-center justify-center">
+                    <i class="fas fa-chart-line text-white"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg">Finance Pro</h1>
+                    <p class="text-xs text-gray-400">Complete Financial Dashboard</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 mt-4">
+                <div id="dataStatusIndicator" class="w-3 h-3 rounded-full bg-red-500"></div>
+                <span class="text-sm" id="dataStatusText">Load Data to Begin</span>
+            </div>
+        </div>
+<div class="manual-match-form">
+  <label>Email</label>
+  <input type="email" id="clientEmailInput" placeholder="client@example.com" class="input-style" />
+
+  <button onclick="matchManually()" class="btn btn-green">
+    <i class="fas fa-link"></i> Match & Email
+  </button>
+</div>
+function matchManually() {
+  const clientEmail = document.getElementById('clientEmailInput').value;
+  if (!selectedBankTx || !selectedPayment || !clientEmail) {
+    alert("⚠️ Please select both items and enter client email");
+    return;
+  }
+
+  selectedBankTx.matched = true;
+  selectedPayment.matched = true;
+
+  saveMatchAndEmail(selectedPayment, selectedBankTx, clientEmail);
+
+  selectedBankTx = null;
+  selectedPayment = null;
+  loadManualMatchingLists();
+// Save HTML invoice
+const invoicePath = path.join(__dirname, 'invoices', `invoice-${matchId}.html`);
+fs.writeFileSync(invoicePath, invoiceHtml);
+const invoiceLink = `${process.env.INVOICE_BASE_URL}/invoice-${matchId}.html`;
+
+}
+
+
+
+        <div class="p-4">
+            <!-- Navigation -->
+            <h3 class="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">Dashboards</h3>
+            <div class="space-y-1">
+                <div class="nav-item active" data-tab="overview">
+                    <i class="fas fa-tachometer-alt w-5"></i>
+                    <span>Overview</span>
+                </div>
+                <div class="nav-item" data-tab="revenue">
+                    <i class="fas fa-money-bill-wave w-5"></i>
+                    <span>Revenue Analysis</span>
+                </div>
+                <div class="nav-item" data-tab="payments">
+                    <i class="fas fa-credit-card w-5"></i>
+                    <span>Payments Analysis</span>
+                </div>
+                <div class="nav-item" data-tab="aging">
+                    <i class="fas fa-clock w-5"></i>
+                    <span>Aging Analysis</span>
+                </div>
+                <div class="nav-item" data-tab="reconciliation">
+                    <i class="fas fa-link w-5"></i>
+                    <span>Reconciliation</span>
+                </div>
+            </div>
+
+            <!-- Data Sources -->
+            <h3 class="text-sm font-semibold text-gray-400 mt-6 mb-3 uppercase tracking-wider">Data Sources</h3>
+            <div class="space-y-3">
+                <div class="file-drop-zone" id="accDropZone">
+                    <i class="fas fa-file-invoice-dollar text-xl mb-2 text-blue-400"></i>
+                    <p class="font-medium text-sm">Account Transactions</p>
+                    <p class="text-xs text-gray-400">Upload Excel/CSV files</p>
+                    <input type="file" id="accFileInput" class="hidden" accept=".xlsx,.xls,.csv">
+                    <div class="mt-2 text-xs" id="accFileStatus">No files loaded</div>
+                    <div class="progress-bar mt-2 hidden" id="accProgressBar">
+                        <div class="progress-fill" id="accProgressFill" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="file-drop-zone" id="creditDropZone">
+                    <i class="fas fa-credit-card text-xl mb-2 text-green-400"></i>
+                    <p class="font-medium text-sm">Credit Analysis</p>
+                    <p class="text-xs text-gray-400">Upload payment records</p>
+                    <input type="file" id="creditFileInput" class="hidden" accept=".xlsx,.xls,.csv">
+                    <div class="mt-2 text-xs" id="creditFileStatus">No files loaded</div>
+                    <div class="progress-bar mt-2 hidden" id="creditProgressBar">
+                        <div class="progress-fill" id="creditProgressFill" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="file-drop-zone" id="ageDropZone">
+                    <i class="fas fa-clock text-xl mb-2 text-yellow-400"></i>
+                    <p class="font-medium text-sm">Age Analysis</p>
+                    <p class="text-xs text-gray-400">Upload aging reports</p>
+                    <input type="file" id="ageFileInput" class="hidden" accept=".xlsx,.xls,.csv">
+                    <div class="mt-2 text-xs" id="ageFileStatus">No files loaded</div>
+                    <div class="progress-bar mt-2 hidden" id="ageProgressBar">
+                        <div class="progress-fill" id="ageProgressFill" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="file-drop-zone" id="bankDropZone">
+                    <i class="fas fa-university text-xl mb-2 text-purple-400"></i>
+                    <p class="font-medium text-sm">Bank Statement</p>
+                    <p class="text-xs text-gray-400">Upload bank statements for matching</p>
+                    <input type="file" id="bankFileInput" class="hidden" accept=".xlsx,.xls,.csv">
+                    <div class="mt-2 text-xs" id="bankFileStatus">No files loaded</div>
+                    <div class="progress-bar mt-2 hidden" id="bankProgressBar">
+                        <div class="progress-fill" id="bankProgressFill" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="mt-6">
+                <h3 class="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">Quick Actions</h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <button class="px-3 py-2 bg-blue-600 rounded-lg text-sm hover:bg-blue-700 transition-colors" onclick="loadSampleData()">
+                        <i class="fas fa-database mr-1"></i>Sample Data
+                    </button>
+                    <button class="px-3 py-2 bg-green-600 rounded-lg text-sm hover:bg-green-700 transition-colors" onclick="exportDashboard()">
+                        <i class="fas fa-download mr-1"></i>Export
+                    </button>
+                    <button class="px-3 py-2 bg-gray-800 rounded-lg text-sm hover:bg-gray-700 transition-colors" onclick="printDashboard()">
+                        <i class="fas fa-print mr-1"></i>Print
+                    </button>
+                    <button class="px-3 py-2 bg-gray-800 rounded-lg text-sm hover:bg-gray-700 transition-colors" onclick="toggleTheme()">
+                        <i class="fas fa-moon mr-1"></i>Theme
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <header class="glass-card m-6 p-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold" id="currentTabTitle">Financial Overview</h1>
+                    <p class="text-gray-400" id="currentTabSubtitle">Complete practice financial intelligence</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="text-right">
+                        <p class="text-sm font-medium">MedPractice Inc.</p>
+                        <p class="text-xs text-gray-400" id="currentPeriod">October 2023</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Overview Tab -->
+        <div id="overview" class="tab-content active p-6">
+            <!-- Executive KPIs -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="kpi-card glass-card fade-in">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm text-gray-400">YTD Revenue</p>
+                            <h3 class="text-2xl font-bold mt-1" id="kpiRevenue">R 0</h3>
+                            <p class="text-xs mt-2 text-gray-400" id="revenueGrowth">From Account Transactions</p>
+                        </div>
+                        <div class="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
+                            <i class="fas fa-money-bill-wave text-blue-400"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kpi-card glass-card fade-in">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm text-gray-400">YTD Payments</p>
+                            <h3 class="text-2xl font-bold mt-1" id="kpiPayments">R 0</h3>
+                            <p class="text-xs mt-2 text-gray-400" id="collectionRate">From Credit Analysis</p>
+                        </div>
+                        <div class="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
+                            <i class="fas fa-credit-card text-green-400"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kpi-card glass-card fade-in">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm text-gray-400">Outstanding</p>
+                            <h3 class="text-2xl font-bold mt-1" id="kpiOutstanding">R 0</h3>
+                            <p class="text-xs mt-2 text-gray-400" id="agingBreakdown">From Age Analysis</p>
+                        </div>
+                        <div class="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                            <i class="fas fa-clock text-yellow-400"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kpi-card glass-card fade-in">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm text-gray-400">Collection Rate</p>
+                            <h3 class="text-2xl font-bold mt-1" id="kpiCollectionRate">0%</h3>
+                            <p class="text-xs mt-2 text-gray-400" id="dsoStatus">Payments vs Revenue</p>
+                        </div>
+                        <div class="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
+                            <i class="fas fa-percentage text-red-400"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Account Groups -->
+            <div class="glass-card p-6 mb-6">
+                <h3 class="font-bold mb-4">Account Groups Analysis</h3>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="font-semibold mb-3 text-blue-400">Medical Aid Groups</h4>
+                        <div class="space-y-3" id="medicalAidGroups">
+                            <div class="text-gray-400 text-sm">No medical aid data available</div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold mb-3 text-green-400">Other Account Groups</h4>
+                        <div class="space-y-3" id="otherAccountGroups">
+                            <div class="text-gray-400 text-sm">No other account data available</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Status -->
+            <div class="glass-card p-6">
+                <h3 class="font-bold mb-4">Data Status</h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+                    <div class="p-4 bg-blue-500/10 rounded-lg">
+                        <i class="fas fa-file-invoice-dollar text-2xl mb-2 text-blue-400"></i>
+                        <p class="font-semibold">Account Transactions</p>
+                        <p class="text-sm text-gray-400" id="accDataStatus">0 records</p>
+                    </div>
+                    <div class="p-4 bg-green-500/10 rounded-lg">
+                        <i class="fas fa-credit-card text-2xl mb-2 text-green-400"></i>
+                        <p class="font-semibold">Credit Analysis</p>
+                        <p class="text-sm text-gray-400" id="creditDataStatus">0 records</p>
+                    </div>
+                    <div class="p-4 bg-yellow-500/10 rounded-lg">
+                        <i class="fas fa-clock text-2xl mb-2 text-yellow-400"></i>
+                        <p class="font-semibold">Age Analysis</p>
+                        <p class="text-sm text-gray-400" id="ageDataStatus">0 records</p>
+                    </div>
+                    <div class="p-4 bg-purple-500/10 rounded-lg">
+                        <i class="fas fa-university text-2xl mb-2 text-purple-400"></i>
+                        <p class="font-semibold">Bank Statements</p>
+                        <p class="text-sm text-gray-400" id="bankDataStatus">0 records</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Revenue Analysis Tab -->
+        <div id="revenue" class="tab-content p-6">
+            <div class="glass-card p-6">
+                <h2 class="text-xl font-bold mb-6">Revenue Analysis</h2>
+                <div class="text-center py-12 text-gray-400">
+                    <i class="fas fa-chart-line text-4xl mb-4"></i>
+                    <p>Load Account Transactions data to view revenue analysis</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payments Analysis Tab -->
+        <div id="payments" class="tab-content p-6">
+            <div class="glass-card p-6">
+                <h2 class="text-xl font-bold mb-6">Payments Analysis</h2>
+                <div class="text-center py-12 text-gray-400">
+                    <i class="fas fa-credit-card text-4xl mb-4"></i>
+                    <p>Load Credit Analysis data to view payments analysis</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Aging Analysis Tab -->
+        <div id="aging" class="tab-content p-6">
+            <div class="glass-card p-6">
+                <h2 class="text-xl font-bold mb-6">Aging Analysis & Collections Management</h2>
+                
+                <!-- Aging Summary KPIs -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="kpi-card glass-card">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-sm text-gray-400">Total Outstanding</p>
+                                <h3 class="text-2xl font-bold mt-1" id="totalOutstanding">R 0</h3>
+                                <p class="text-xs mt-2 text-gray-400" id="accountCount">0 accounts</p>
+                            </div>
+                            <div class="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
+                                <i class="fas fa-file-invoice-dollar text-blue-400"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card glass-card">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-sm text-gray-400">Overdue > 90 Days</p>
+                                <h3 class="text-2xl font-bold mt-1" id="overdue90">R 0</h3>
+                                <p class="text-xs mt-2 text-gray-400" id="overdue90Percent">0% of total</p>
+                            </div>
+                            <div class="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
+                                <i class="fas fa-exclamation-triangle text-red-400"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card glass-card">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-sm text-gray-400">High Priority</p>
+                                <h3 class="text-2xl font-bold mt-1" id="highPriorityCount">0</h3>
+                                <p class="text-xs mt-2 text-gray-400">Accounts needing action</p>
+                            </div>
+                            <div class="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center">
+                                <i class="fas fa-flag text-orange-400"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card glass-card">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-sm text-gray-400">Collection Rate</p>
+                                <h3 class="text-2xl font-bold mt-1" id="agingCollectionRate">0%</h3>
+                                <p class="text-xs mt-2 text-gray-400">Based on payments vs aging</p>
+                            </div>
+                            <div class="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
+                                <i class="fas fa-percentage text-green-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Aging Distribution Chart -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <div class="lg:col-span-2 glass-card p-6">
+                        <h3 class="font-bold mb-4">Aging Bucket Distribution</h3>
+                        <div class="h-64">
+                            <canvas id="agingChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="glass-card p-6">
+                        <h3 class="font-bold mb-4">Priority Distribution</h3>
+                        <div class="space-y-4" id="prioritySummary">
+                            <div class="text-gray-400 text-sm">Load age analysis data to view</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Plan & Workflow -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <div class="glass-card p-6">
+                        <h3 class="font-bold mb-4 text-red-400">
+                            <i class="fas fa-fire mr-2"></i>Immediate Action Required
+                        </h3>
+                        <div class="space-y-3 max-h-80 overflow-y-auto" id="immediateAction">
+                            <div class="text-gray-400 text-sm">No immediate actions required</div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-6">
+                        <h3 class="font-bold mb-4 text-orange-400">
+                            <i class="fas fa-clipboard-list mr-2"></i>Weekly Workflow
+                        </h3>
+                        <div class="space-y-3 text-sm" id="weeklyWorkflow">
+                            <div class="flex items-center justify-between p-3 bg-blue-500/10 rounded-lg">
+                                <span>Monday: Export data & generate reports</span>
+                                <span class="text-xs text-gray-400">Pending</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-blue-500/10 rounded-lg">
+                                <span>Tuesday-Thursday: Follow-up actions</span>
+                                <span class="text-xs text-gray-400">Pending</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-blue-500/10 rounded-lg">
+                                <span>Friday: Progress update & planning</span>
+                                <span class="text-xs text-gray-400">Pending</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detailed Aging Analysis -->
+                <div class="glass-card p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold">Detailed Account Group Analysis</h3>
+                        <div class="flex gap-2">
+                            <button onclick="exportAgingReport()" class="px-3 py-1 bg-green-600 rounded text-sm hover:bg-green-700">
+                                <i class="fas fa-download mr-1"></i>Export
+                            </button>
+                            <button onclick="printAgingReport()" class="px-3 py-1 bg-gray-600 rounded text-sm hover:bg-gray-700">
+                                <i class="fas fa-print mr-1"></i>Print
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Account Group</th>
+                                    <th>Count</th>
+                                    <th>Total Balance</th>
+                                    <th>Current</th>
+                                    <th>30 Days</th>
+                                    <th>60 Days</th>
+                                    <th>90 Days</th>
+                                    <th>120 Days</th>
+                                    <th>150+ Days</th>
+                                    <th>Priority</th>
+                                </tr>
+                            </thead>
+                            <tbody id="agingTableBody">
+                                <tr>
+                                    <td colspan="10" class="text-center text-gray-400 py-4">Load age analysis data to view details</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reconciliation Tab -->
+        <div id="reconciliation" class="tab-content p-6">
+            <div class="glass-card p-6">
+                <h2 class="text-xl font-bold mb-6">Payment Reconciliation</h2>
+                
+                <!-- Reconciliation Summary -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="kpi-card glass-card">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-sm text-gray-400">Total Payments</p>
+                                <h3 class="text-2xl font-bold mt-1" id="totalPayments">R 0</h3>
+                                <p class="text-xs mt-2 text-gray-400">Recorded payments</p>
+                            </div>
+                            <div class="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
+                                <i class="fas fa-credit-card text-blue-400"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card glass-card">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-sm text-gray-400">Bank Deposits</p>
+                                <h3 class="text-2xl font-bold mt-1" id="bankDeposits">R 0</h3>
+                                <p class="text-xs mt-2 text-gray-400">Bank statement credits</p>
+                            </div>
+                            <div class="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
+                                <i class="fas fa-university text-green-400"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card glass-card">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-sm text-gray-400">Match Rate</p>
+                                <h3 class="text-2xl font-bold mt-1" id="matchRate">0%</h3>
+                                <p class="text-xs mt-2 text-gray-400">Payments matched</p>
+                            </div>
+                            <div class="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
+                                <i class="fas fa-link text-purple-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reconciliation Controls -->
+                <div class="flex gap-4 mb-6">
+                    <button onclick="runReconciliation()" class="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-sync-alt mr-2"></i>Run Reconciliation
+                    </button>
+                    <button onclick="exportReconciliationReport()" class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700 transition-colors">
+                        <i class="fas fa-download mr-2"></i>Export Report
+                    </button>
+                </div>
+
+                <!-- Reconciliation Results -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Unmatched Payments -->
+                    <div class="glass-card p-6">
+                        <h3 class="font-bold mb-4 text-red-400">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>Unmatched Payments
+                        </h3>
+                        <div class="space-y-3 max-h-96 overflow-y-auto" id="unmatchedPayments">
+                            <div class="text-gray-400 text-sm">No unmatched payments</div>
+                        </div>
+                    </div>
+
+                    <!-- Unmatched Bank Transactions -->
+                    <div class="glass-card p-6">
+                        <h3 class="font-bold mb-4 text-yellow-400">
+                            <i class="fas fa-search mr-2"></i>Unmatched Bank Transactions
+                        </h3>
+                        <div class="space-y-3 max-h-96 overflow-y-auto" id="unmatchedBankTx">
+                            <div class="text-gray-400 text-sm">No unmatched bank transactions</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast no-print">
+        <i id="toastIcon" class="fas fa-info-circle text-blue-400"></i>
+        <div>
+            <p id="toastMessage" class="font-medium">Notification</p>
+            <p id="toastSubtext" class="text-xs text-gray-400"></p>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        const state = {
+            currentTab: 'overview',
+            data: {
+                accountTxns: [],
+                creditPayments: [],
+                ageAnalysis: [],
+                bankStatements: [],
+                accountGroups: new Map(),
+                medicalAidSchemes: new Map()
+            },
+            fileStatus: {
+                account: false,
+                credit: false,
+                age: false,
+                bank: false
+            }
+        };
+
+        // Account group configuration
+        const accountGroupConfig = {
+            medicalAids: {
+                'DISCOVERY': 'Discovery Health',
+                'BONITAS': 'Bonitas',
+                'GEMS': 'GEMS',
+                'MOMENTUM': 'Momentum Health',
+                'FEDHEALTH': 'FedHealth',
+                'MEDSHIELD': 'Medshield',
+                'KEYHEALTH': 'KeyHealth',
+                'BESTMED': 'Bestmed',
+                'BANKMED': 'Bankmed',
+                'POLMED': 'Polmed',
+                'MEDIHELP': 'Medihelp',
+                'UMVUZO': 'Umvuzo Health',
+                'SIZWE': 'Sizwe Hosmed'
+            },
+            otherGroups: {
+                'CASH': 'Cash Patients',
+                'PATIENT': 'Patient Payments',
+                'EFT': 'EFT Payments',
+                'CREDIT CARD': 'Credit Card',
+                'DEBIT ORDER': 'Debit Order',
+                'REFUND': 'Refunds',
+                'ADJUSTMENT': 'Adjustments'
+            },
+            agingGroups: {
+                'PT LIABLE COPAY': 'Patient Liable Copay',
+                'COID': 'Compensation Fund',
+                'PMB': 'Prescribed Minimum Benefits',
+                'AFS FOLLOW UP': 'AFS Follow Up',
+                'PT LIABLE LO': 'Patient Liable Late Payment',
+                'MONTHLY REPAYMENT': 'Monthly Repayment Plan',
+                'PRIVATE': 'Private Patients',
+                'OTHER': 'Other Accounts'
+            },
+            bankKeywords: {
+                'EFT': 'EFT Payment',
+                'DEBIT CARD': 'Card Payment',
+                'CREDIT CARD': 'Card Payment',
+                'FEE': 'Bank Fees',
+                'COMMISSION': 'Bank Charges',
+                'SERVICE CHARGE': 'Bank Charges'
+            }
+        };
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Finance Pro: Application starting...');
+            initializeEventListeners();
+            showToast('Welcome to Finance Pro', 'Load your financial data or use sample data to begin');
+        });
+
+        function initializeEventListeners() {
+            // Navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const tab = this.getAttribute('data-tab');
+                    switchTab(tab);
+                });
+            });
+
+            // File uploads
+            setupFileUpload('accDropZone', 'accFileInput', 'account');
+            setupFileUpload('creditDropZone', 'creditFileInput', 'credit');
+            setupFileUpload('ageDropZone', 'ageFileInput', 'age');
+            setupFileUpload('bankDropZone', 'bankFileInput', 'bank');
+
+            // Mobile menu
+            document.getElementById('mobileMenuBtn').addEventListener('click', function() {
+                document.querySelector('.sidebar').classList.toggle('open');
+            });
+        }
+
+        function setupFileUpload(dropZoneId, fileInputId, type) {
+            const dropZone = document.getElementById(dropZoneId);
+            const fileInput = document.getElementById(fileInputId);
+
+            dropZone.addEventListener('click', () => fileInput.click());
+            
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+            
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('dragover');
+            });
+            
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                handleFileUpload(e.dataTransfer.files, type);
+            });
+            
+            fileInput.addEventListener('change', (e) => {
+                handleFileUpload(e.target.files, type);
+            });
+        }
+
+        async function handleFileUpload(files, type) {
+            if (!files || files.length === 0) return;
+
+            const statusElement = document.getElementById(`${type}FileStatus`);
+            const progressBar = document.getElementById(`${type}ProgressBar`);
+            const progressFill = document.getElementById(`${type}ProgressFill`);
+
+            // Show loading state
+            statusElement.innerHTML = `<span class="text-blue-400"><div class="loading-spinner"></div> Processing ${files.length} file(s)...</span>`;
+            if (progressBar) progressBar.classList.remove('hidden');
+            if (progressFill) progressFill.style.width = '10%';
+
+            try {
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const progress = 10 + ((i + 1) / files.length) * 80;
+                    if (progressFill) progressFill.style.width = `${progress}%`;
+
+                    console.log(`Processing ${type} file:`, file.name);
+                    const data = await parseExcelFile(file);
+                    console.log(`Parsed data for ${type}:`, data);
+await transporter.sendMail({
+  from: process.env.EMAIL_FROM,
+  to: clientEmail,
+  subject: `Invoice for Payment ${paymentId}`,
+  html: invoiceHtml  // <-- sent inline
+});
+
+<!-- Client Management Card -->
+<div class="glass-card p-6 mt-6">
+  <h3 class="font-bold mb-4 text-blue-400">➕ Add New Client</h3>
+  <div class="grid grid-cols-2 gap-4">
+    <input type="text" id="clientPractice" placeholder="Practice Number" class="input-style" />
+    <input type="text" id="clientFirst" placeholder="First Name" class="input-style" />
+    <input type="text" id="clientLast" placeholder="Last Name" class="input-style" />
+    <input type="email" id="clientEmail" placeholder="Email" class="input-style" />
+    <input type="number" id="clientRate" placeholder="Billing Rate" class="input-style" />
+  </div>
+  <button onclick="createClient()" class="btn mt-4 bg-green-600 hover:bg-green-700">
+    <i class="fas fa-user-plus mr-1"></i> Save Client
+  </button>
+</div>
+async function createClient() {
+  const data = {
+    practiceNumber: document.getElementById('clientPractice').value,
+    firstName: document.getElementById('clientFirst').value,
+    lastName: document.getElementById('clientLast').value,
+    email: document.getElementById('clientEmail').value,
+    rate: parseFloat(document.getElementById('clientRate').value),
+  };
+
+  const res = await fetch('http://localhost:4000/api/clients', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+
+  const json = await res.json();
+  if (json.success) {
+    alert('Client added!');
+  } else {
+    alert('❌ Error: ' + json.error);
+  }
+}
+<select id="clientDropdown" class="input-style">
+  <!-- dynamically filled -->
+</select>
+<div id="clientForm" class="glass-card p-6">
+  <h3 class="text-xl font-bold">➕ Manage Client</h3>
+  <input id="clientPractice" placeholder="Practice #" class="input-style" />
+  <input id="clientFirst" placeholder="First Name" class="input-style" />
+  <input id="clientLast" placeholder="Last Name" class="input-style" />
+  <input id="clientEmail" placeholder="Email" class="input-style" />
+  <input id="clientRate" type="number" placeholder="Rate" class="input-style" />
+  <button onclick="saveClient()" class="btn bg-green-600 mt-4">💾 Save Client</button>
+</div>
+let editingClientId = null;
+
+async function saveClient() {
+  const payload = {
+    practiceNumber: document.getElementById('clientPractice').value,
+    firstName: document.getElementById('clientFirst').value,
+    lastName: document.getElementById('clientLast').value,
+    email: document.getElementById('clientEmail').value,
+    rate: parseFloat(document.getElementById('clientRate').value)
+  };
+
+  const url = editingClientId
+    ? `http://localhost:4000/api/clients/${editingClientId}`
+    : 'http://localhost:4000/api/clients';
+
+  const method = editingClientId ? 'PUT' : 'POST';
+
+  const res = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  if ((await res.json()).success) {
+    loadClients();
+    editingClientId = null;
+  }
+}
+
+async function loadClients() {
+  const res = await fetch('http://localhost:4000/api/clients');
+  const json = await res.json();
+  const list = document.getElementById('clientList');
+  list.innerHTML = '';
+
+  json.clients.forEach(client => {
+    const row = document.createElement('div');
+    row.className = 'flex justify-between p-2 border-b';
+    row.innerHTML = `
+      <div>${client.practice_number} – ${client.first_name} ${client.last_name}</div>
+      <div>
+        <button onclick='editClient(${JSON.stringify(client)})'>✏️</button>
+        <button onclick='deleteClient(${client.id})'>🗑️</button>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+}
+
+function editClient(c) {
+  editingClientId = c.id;
+  document.getElementById('clientPractice').value = c.practice_number;
+  document.getElementById('clientFirst').value = c.first_name;
+  document.getElementById('clientLast').value = c.last_name;
+  document.getElementById('clientEmail').value = c.email;
+  document.getElementById('clientRate').value = c.rate;
+}
+
+async function deleteClient(id) {
+  if (!confirm('Delete this client?')) return;
+  await fetch(`http://localhost:4000/api/clients/${id}`, { method: 'DELETE' });
+  loadClients();
+}
+<select id="clientDropdown" onchange="onClientSelect()" class="input-style">
+  <option disabled selected>Select Client</option>
+</select>
+async function populateClientDropdown() {
+  const res = await fetch('http://localhost:4000/api/clients');
+  const { clients } = await res.json();
+  const select = document.getElementById('clientDropdown');
+  clients.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = JSON.stringify(c);
+    opt.textContent = `${c.practice_number} - ${c.first_name} ${c.last_name}`;
+    select.appendChild(opt);
+  });
+}
+
+function onClientSelect() {
+  const client = JSON.parse(document.getElementById('clientDropdown').value);
+  document.getElementById('clientEmailInput').value = client.email;
+  document.getElementById('clientRateDisplay').textContent = `Rate: ${client.rate.toFixed(2)}`;
+}
+
+
+
+
+
+                    
+                    if (type === 'bank') {
+                        processBankStatementData(data, file.name);
+                    } else {
+                        processFileData(data, type, file.name);
+                    }
+                }
+
+                // Final progress
+                if (progressFill) progressFill.style.width = '100%';
+
+                updateFileStatus(type, files.length);
+                updateDataStatus();
+                updateKPIs();
+                updateAccountGroups();
+                
+                // Update specific analysis based on data type
+                if (type === 'age') {
+                    updateAgingAnalysis();
+                }
+                if (type === 'bank' || type === 'credit') {
+                    updateReconciliationDisplay();
+                }
+
+                statusElement.innerHTML = `<span class="text-green-400"><i class="fas fa-check-circle"></i> Successfully loaded ${files.length} file(s)</span>`;
+                showToast('File processed successfully', `${files.length} ${type} file(s) loaded`, 'success');
+                
+            } catch (error) {
+                console.error(`Error processing ${type} file:`, error);
+                statusElement.innerHTML = `<span class="text-red-400"><i class="fas fa-exclamation-circle"></i> Error: ${error.message}</span>`;
+                showToast('Error processing file', error.message, 'error');
+            } finally {
+                setTimeout(() => {
+                    if (progressBar) progressBar.classList.add('hidden');
+                }, 2000);
+            }
+        }
+
+        function parseExcelFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        console.log('File read successfully, size:', e.target.result.byteLength);
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        console.log('Workbook sheets:', workbook.SheetNames);
+                        
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                        console.log('Parsed JSON data:', jsonData);
+                        
+                        resolve(jsonData);
+                    } catch (error) {
+                        console.error('Error parsing Excel file:', error);
+                        reject(new Error('Invalid file format - please upload valid Excel or CSV files'));
+                    }
+                };
+                
+                reader.onerror = (error) => {
+                    console.error('FileReader error:', error);
+                    reject(new Error('Failed to read file - file may be corrupted'));
+                };
+                
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function debugFileData(data, filename) {
+            console.log(`=== DEBUG: ${filename} ===`);
+            console.log('Total rows:', data.length);
+            if (data.length > 0) {
+                console.log('Headers:', data[0]);
+                console.log('First few rows:');
+                
+                for (let i = 1; i < Math.min(5, data.length); i++) {
+                    console.log(`Row ${i}:`, data[i]);
+                }
+                
+                // Log column indices found
+                const headers = data[0] || [];
+                console.log('Column Analysis:');
+                console.log('- Amount column:', findColumnIndex(headers, ['amount', 'paid']));
+                console.log('- Date column:', findColumnIndex(headers, ['service date', 'create date']));
+                console.log('- Description column:', findColumnIndex(headers, ['description', 'ledger']));
+            }
+            console.log('=== END DEBUG ===');
+        }
+
+        function processFileData(data, type, filename) {
+            console.log(`Processing ${type} data from ${filename}`);
+            
+            // Add debug logging
+            debugFileData(data, filename);
+            
+            if (!data || data.length === 0) {
+                throw new Error('File is empty or contains no data');
+            }
+
+            // Clear previous data for this type
+            switch (type) {
+                case 'account':
+                    state.data.accountTxns = [];
+                    break;
+                case 'credit':
+                    state.data.creditPayments = [];
+                    break;
+                case 'age':
+                    state.data.ageAnalysis = [];
+                    state.data.accountGroups.clear();
+                    state.data.medicalAidSchemes.clear();
+                    break;
+            }
+
+            let processedRows = 0;
+            const headers = data[0] || [];
+            console.log('Processing headers:', headers);
+
+            for (let i = 1; i < data.length; i++) {
+                const row = data[i];
+                if (!row || row.length === 0) continue;
+
+                try {
+                    switch (type) {
+                        case 'account':
+                            if (processAccountRow(row, headers)) processedRows++;
+                            break;
+                        case 'credit':
+                            if (processCreditRow(row, headers)) processedRows++;
+                            break;
+                        case 'age':
+                            if (processAgeRow(row, headers)) processedRows++;
+                            break;
+                    }
+                } catch (error) {
+                    console.warn(`Error processing row ${i}:`, row, error);
+                }
+            }
+
+            console.log(`Processed ${processedRows} valid rows for ${type}`);
+            
+            if (processedRows === 0) {
+                // Provide more helpful error message
+                const errorMsg = `No valid data found in file. Please check:
+                - File contains data beyond headers
+                - Amount, Date, and Description columns exist
+                - Data is in the expected format`;
+                throw new Error(errorMsg);
+            }
+
+            state.fileStatus[type] = true;
+            console.log(`Final ${type} data count:`, state.data[type === 'account' ? 'accountTxns' : type === 'credit' ? 'creditPayments' : 'ageAnalysis'].length);
+        }
+
+        function processAccountRow(row, headers) {
+            console.log('Processing row:', row);
+            console.log('Headers:', headers);
+            
+            // Enhanced column detection for your specific Excel format
+            const amountIndex = findColumnIndex(headers, ['amount', 'paid', 'nett amount']);
+            const dateIndex = findColumnIndex(headers, ['service date', 'create date', 'date']);
+            const descIndex = findColumnIndex(headers, ['description', 'ledger sub-account', 'financial type']);
+            const referenceIndex = findColumnIndex(headers, ['doc. number', 'account no.', 'reference']);
+            const accountHolderIndex = findColumnIndex(headers, ['account holder', 'patient details']);
+            const medicalSchemeIndex = findColumnIndex(headers, ['medical scheme', 'administrator']);
+            
+            console.log('Found columns - Amount:', amountIndex, 'Date:', dateIndex, 'Desc:', descIndex);
+            
+            if (amountIndex === -1 || dateIndex === -1 || descIndex === -1) {
+                console.warn('Missing required columns. Available headers:', headers);
+                return false;
+            }
+
+            const amountStr = String(row[amountIndex] || '0');
+            const dateStr = row[dateIndex];
+            const description = String(row[descIndex] || '').toUpperCase();
+            const reference = referenceIndex !== -1 ? String(row[referenceIndex] || '') : '';
+            const accountHolder = accountHolderIndex !== -1 ? String(row[accountHolderIndex] || '') : '';
+            const medicalScheme = medicalSchemeIndex !== -1 ? String(row[medicalSchemeIndex] || '') : '';
+
+            console.log('Raw data - Amount:', amountStr, 'Date:', dateStr, 'Desc:', description);
+
+            // Skip empty rows or rows with zero amount
+            if (!dateStr || !description || amountStr === '0') {
+                console.log('Skipping row - missing data or zero amount');
+                return false;
+            }
+
+            const date = parseDate(dateStr);
+            const amount = parseAmount(amountStr);
+
+            console.log('Parsed - Date:', date, 'Amount:', amount);
+
+            if (!date || amount === 0) {
+                console.log('Skipping row - invalid date or zero amount after parsing');
+                return false;
+            }
+
+            // Create enhanced description with more context
+            let enhancedDescription = description;
+            if (accountHolder) {
+                enhancedDescription += ` - ${accountHolder}`;
+            }
+            if (medicalScheme) {
+                enhancedDescription += ` [${medicalScheme}]`;
+            }
+
+            const transaction = {
+                date: date,
+                description: enhancedDescription,
+                originalDescription: description,
+                amount: Math.abs(amount), // Convert to positive for display
+                reference: reference,
+                accountHolder: accountHolder,
+                medicalScheme: medicalScheme,
+                accountGroup: mapToAccountGroup(description + ' ' + medicalScheme),
+                type: amount < 0 ? 'credit' : 'debit', // Negative amounts are credits (payments)
+                matched: false,
+                matchedTo: null
+            };
+            
+            console.log('Created transaction:', transaction);
+            state.data.accountTxns.push(transaction);
+            return true;
+        }
+
+        function processCreditRow(row, headers) {
+            const dateIndex = findColumnIndex(headers, ['date', 'payment date', 'transaction date', 'deposit date']);
+            const descIndex = findColumnIndex(headers, ['description', 'narration', 'details', 'payer', 'patient']);
+            const amountIndex = findColumnIndex(headers, ['amount', 'payment amount', 'credit', 'deposit']);
+            const referenceIndex = findColumnIndex(headers, ['reference', 'payment ref', 'receipt no']);
+            
+            if (dateIndex === -1 || descIndex === -1 || amountIndex === -1) {
+                console.warn('Missing required columns in credit data. Headers found:', headers);
+                return false;
+            }
+
+            const dateStr = row[dateIndex];
+            const description = String(row[descIndex] || '').toUpperCase();
+            const amountStr = String(row[amountIndex] || '0');
+            const reference = referenceIndex !== -1 ? String(row[referenceIndex] || '') : '';
+
+            if (!dateStr || !description) return false;
+
+            const date = parseDate(dateStr);
+            const amount = parseAmount(amountStr);
+
+            if (!date || amount === 0) return false;
+
+            const payment = {
+                date: date,
+                description: description,
+                amount: Math.abs(amount),
+                reference: reference,
+                accountGroup: mapToAccountGroup(description),
+                matched: false,
+                matchedTo: null
+            };
+            
+            state.data.creditPayments.push(payment);
+            return true;
+        }
+
+        function processAgeRow(row, headers) {
+            // Enhanced column detection for age analysis
+            const entityIndex = findColumnIndex(headers, ['account group', 'entity', 'account', 'debtor', 'customer', 'scheme', 'category']);
+            const countIndex = findColumnIndex(headers, ['count', 'number', 'invoices', 'items']);
+            const totalIndex = findColumnIndex(headers, ['total balance', 'total', 'amount', 'balance', 'outstanding']);
+            const currentIndex = findColumnIndex(headers, ['current', '0-30', '0 days', '0-30 days']);
+            const days30Index = findColumnIndex(headers, ['30', '31-60', '30 days', '30-60 days']);
+            const days60Index = findColumnIndex(headers, ['60', '61-90', '60 days', '60-90 days']);
+            const days90Index = findColumnIndex(headers, ['90', '91-120', '90 days', '90-120 days']);
+            const days120Index = findColumnIndex(headers, ['120', '121-150', '120 days', '120-150 days']);
+            const days150Index = findColumnIndex(headers, ['150', '150+', 'over 150', '150+ days']);
+            
+            if (entityIndex === -1 || totalIndex === -1) {
+                console.warn('Missing required columns in aging data. Headers found:', headers);
+                return false;
+            }
+
+            const entity = String(row[entityIndex] || '').trim();
+            if (!entity) return false;
+
+            // Parse amounts with better error handling
+            const count = countIndex !== -1 ? parseInt(row[countIndex] || '0') : 0;
+            const total = parseAmount(row[totalIndex] || '0');
+            const current = currentIndex !== -1 ? parseAmount(row[currentIndex] || '0') : 0;
+            const days30 = days30Index !== -1 ? parseAmount(row[days30Index] || '0') : 0;
+            const days60 = days60Index !== -1 ? parseAmount(row[days60Index] || '0') : 0;
+            const days90 = days90Index !== -1 ? parseAmount(row[days90Index] || '0') : 0;
+            const days120 = days120Index !== -1 ? parseAmount(row[days120Index] || '0') : 0;
+            const days150 = days150Index !== -1 ? parseAmount(row[days150Index] || '0') : 0;
+
+            // Validate data
+            if (total === 0) return false;
+
+            const agingRecord = {
+                entity: entity,
+                count: count,
+                total: total,
+                current: current,
+                days30: days30,
+                days60: days60,
+                days90: days90,
+                days120: days120,
+                days150: days150,
+                accountGroup: mapToAccountGroup(entity),
+                priority: calculatePriority(total, days120 + days150),
+                lastFollowUp: null,
+                status: 'Pending'
+            };
+            
+            state.data.ageAnalysis.push(agingRecord);
+            updateAccountGroups(agingRecord);
+            return true;
+        }
+
+        function processBankStatementData(data, filename) {
+            console.log(`Processing bank statement data from ${filename}:`, data);
+            
+            if (!data || data.length === 0) {
+                throw new Error('File is empty or contains no data');
+            }
+
+            // Clear previous bank data
+            state.data.bankStatements = [];
+
+            let processedRows = 0;
+            const headers = data[0] || [];
+            console.log('Bank statement headers:', headers);
+
+            for (let i = 1; i < data.length; i++) {
+                const row = data[i];
+                if (!row || row.length === 0) continue;
+
+                try {
+                    if (processBankStatementRow(row, headers)) processedRows++;
+                } catch (error) {
+                    console.warn('Skipping invalid bank statement row:', row, error);
+                }
+            }
+
+            console.log(`Processed ${processedRows} valid bank statement rows`);
+            
+            if (processedRows === 0) {
+                throw new Error('No valid bank statement data found. Please check file format.');
+            }
+
+            state.fileStatus.bank = true;
+            console.log('Final bank statement data:', state.data.bankStatements);
+        }
+
+        function processBankStatementRow(row, headers) {
+            const dateIndex = findColumnIndex(headers, ['date', 'transaction date', 'value date']);
+            const descIndex = findColumnIndex(headers, ['description', 'narration', 'details', 'particulars']);
+            const amountIndex = findColumnIndex(headers, ['amount', 'debit', 'credit', 'value']);
+            const referenceIndex = findColumnIndex(headers, ['reference', 'transaction ref', 'payment ref']);
+            const balanceIndex = findColumnIndex(headers, ['balance', 'running balance']);
+            
+            if (dateIndex === -1 || descIndex === -1 || amountIndex === -1) {
+                console.warn('Missing required columns in bank statement data');
+                return false;
+            }
+
+            const dateStr = row[dateIndex];
+            const description = String(row[descIndex] || '').toUpperCase();
+            const amountStr = String(row[amountIndex] || '0');
+            const reference = referenceIndex !== -1 ? String(row[referenceIndex] || '') : '';
+            const balance = balanceIndex !== -1 ? parseAmount(row[balanceIndex] || '0') : null;
+
+            if (!dateStr || !description) return false;
+
+            const date = parseDate(dateStr);
+            const amount = parseAmount(amountStr);
+
+            if (!date || amount === 0) return false;
+
+            const transaction = {
+                date: date,
+                description: description,
+                amount: amount,
+                reference: reference,
+                balance: balance,
+                type: amount > 0 ? 'credit' : 'debit',
+                accountGroup: mapToBankAccountGroup(description),
+                matched: false,
+                matchedTo: null
+            };
+            
+            state.data.bankStatements.push(transaction);
+            return true;
+        }
+
+        function findColumnIndex(headers, possibleNames) {
+            if (!headers || !Array.isArray(headers)) {
+                console.warn('Invalid headers array:', headers);
+                return -1;
+            }
+            
+            for (const name of possibleNames) {
+                const index = headers.findIndex(header => {
+                    if (!header) return false;
+                    const headerStr = String(header).toLowerCase().trim();
+                    const nameStr = name.toLowerCase().trim();
+                    return headerStr.includes(nameStr) || nameStr.includes(headerStr);
+                });
+                if (index !== -1) {
+                    console.log(`Found column "${name}" at index ${index}`);
+                    return index;
+                }
+            }
+            
+            console.log(`No column found for names: ${possibleNames.join(', ')}`);
+            // If no exact match found, try partial matching
+            for (const name of possibleNames) {
+                for (let i = 0; i < headers.length; i++) {
+                    const header = headers[i];
+                    if (header && String(header).toLowerCase().includes(name.toLowerCase())) {
+                        console.log(`Found partial match for "${name}" at index ${i}`);
+                        return i;
+                    }
+                }
+            }
+            
+            return -1;
+        }
+
+        function parseDate(dateValue) {
+            if (!dateValue) return null;
+            
+            console.log('Parsing date:', dateValue, 'Type:', typeof dateValue);
+            
+            // Handle Excel serial dates (numbers)
+            if (typeof dateValue === 'number') {
+                const date = new Date((dateValue - 25569) * 86400 * 1000);
+                console.log('Excel serial date converted:', date);
+                return date;
+            }
+            
+            // Handle string dates - your format appears to be DD/MM/YYYY
+            const dateStr = String(dateValue).trim();
+            
+            // Try DD/MM/YYYY format (common in your data)
+            const parts = dateStr.split('/');
+            if (parts.length === 3) {
+                const day = parseInt(parts[0]);
+                const month = parseInt(parts[1]) - 1; // Months are 0-indexed
+                const year = parseInt(parts[2]);
+                
+                if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+                    const date = new Date(year, month, day);
+                    if (!isNaN(date.getTime())) {
+                        console.log('DD/MM/YYYY date parsed:', date);
+                        return date;
+                    }
+                }
+            }
+            
+            // Try other common formats
+            let date = new Date(dateStr);
+            
+            if (isNaN(date.getTime())) {
+                // Try MM/DD/YYYY as fallback
+                const altParts = dateStr.split('/');
+                if (altParts.length === 3) {
+                    date = new Date(altParts[2], altParts[0] - 1, altParts[1]);
+                }
+            }
+            
+            if (isNaN(date.getTime())) {
+                console.warn('Invalid date format:', dateValue);
+                return null;
+            }
+            
+            console.log('Date parsed successfully:', date);
+            return date;
+        }
+
+        function parseAmount(amountValue) {
+            if (!amountValue && amountValue !== 0) return 0;
+            
+            // Handle numbers directly
+            if (typeof amountValue === 'number') {
+                return Math.abs(amountValue);
+            }
+            
+            // Handle strings
+            const amountStr = String(amountValue)
+                .replace(/[^\d.-]/g, '') // Remove non-numeric characters except . and -
+                .replace(/,/g, ''); // Remove commas
+            
+            const amount = parseFloat(amountStr);
+            return isNaN(amount) ? 0 : Math.abs(amount);
+        }
+
+        function calculatePriority(totalAmount, overdueAmount) {
+            const overduePercentage = totalAmount > 0 ? (overdueAmount / totalAmount) * 100 : 0;
+            
+            if (overdueAmount > 5000 || overduePercentage > 50) return 'High';
+            if (overdueAmount > 1000 || overduePercentage > 25) return 'Medium';
+            return 'Low';
+        }
+
+        function updateAccountGroups(record) {
+            const group = record.accountGroup;
+            if (!state.data.accountGroups.has(group)) {
+                state.data.accountGroups.set(group, {
+                    current: 0, days30: 0, days60: 0, days90: 0, days120: 0, days150: 0, total: 0
+                });
+            }
+            
+            const groupData = state.data.accountGroups.get(group);
+            groupData.current += record.current;
+            groupData.days30 += record.days30;
+            groupData.days60 += record.days60;
+            groupData.days90 += record.days90;
+            groupData.days120 += record.days120;
+            groupData.days150 += record.days150;
+            groupData.total += record.total;
+            
+            if (record.isMedicalAid) {
+                if (!state.data.medicalAidSchemes.has(record.entity)) {
+                    state.data.medicalAidSchemes.set(record.entity, {
+                        current: 0, days30: 0, days60: 0, days90: 0, days120: 0, days150: 0, total: 0
+                    });
+                }
+                
+                const schemeData = state.data.medicalAidSchemes.get(record.entity);
+                schemeData.current += record.current;
+                schemeData.days30 += record.days30;
+                schemeData.days60 += record.days60;
+                schemeData.days90 += record.days90;
+                schemeData.days120 += record.days120;
+                schemeData.days150 += record.days150;
+                schemeData.total += record.total;
+            }
+        }
+
+        function mapToAccountGroup(description) {
+            const desc = description.toUpperCase();
+            
+            // Check medical aids
+            for (const [key, value] of Object.entries(accountGroupConfig.medicalAids)) {
+                if (desc.includes(key)) return value;
+            }
+            
+            // Check aging groups
+            for (const [key, value] of Object.entries(accountGroupConfig.agingGroups)) {
+                if (desc.includes(key)) return value;
+            }
+            
+            // Check other groups
+            for (const [key, value] of Object.entries(accountGroupConfig.otherGroups)) {
+                if (desc.includes(key)) return value;
+            }
+            
+            return 'Other';
+        }
+
+        function mapToBankAccountGroup(description) {
+            const desc = description.toUpperCase();
+            
+            for (const [key, value] of Object.entries(accountGroupConfig.bankKeywords)) {
+                if (desc.includes(key)) return value;
+            }
+            
+            return 'Bank Transaction';
+        }
+
+        function isMedicalAid(description) {
+            const desc = description.toUpperCase();
+            return Object.keys(accountGroupConfig.medicalAids).some(key => desc.includes(key));
+        }
+
+        function updateFileStatus(type, fileCount) {
+            const statusElement = document.getElementById(`${type}FileStatus`);
+            const recordCount = getRecordCount(type);
+            statusElement.innerHTML = `<span class="text-green-400"><i class="fas fa-check-circle"></i> ${fileCount} file(s) - ${recordCount} records</span>`;
+        }
+
+        function getRecordCount(type) {
+            switch (type) {
+                case 'account': return state.data.accountTxns.length;
+                case 'credit': return state.data.creditPayments.length;
+                case 'age': return state.data.ageAnalysis.length;
+                case 'bank': return state.data.bankStatements.length;
+                default: return 0;
+            }
+        }
+
+        function updateDataStatus() {
+            const loadedFiles = Object.values(state.fileStatus).filter(Boolean).length;
+            const statusIndicator = document.getElementById('dataStatusIndicator');
+            const statusText = document.getElementById('dataStatusText');
+            
+            // Update status indicator
+            if (loadedFiles === 4) {
+                statusIndicator.className = 'w-3 h-3 rounded-full bg-green-500';
+                statusText.textContent = 'All Data Loaded';
+            } else if (loadedFiles > 0) {
+                statusIndicator.className = 'w-3 h-3 rounded-full bg-yellow-500';
+                statusText.textContent = `${loadedFiles}/4 Data Sources Loaded`;
+            } else {
+                statusIndicator.className = 'w-3 h-3 rounded-full bg-red-500';
+                statusText.textContent = 'Load Data to Begin';
+            }
+
+            // Update data counters
+            document.getElementById('accDataStatus').textContent = `${state.data.accountTxns.length} records`;
+            document.getElementById('creditDataStatus').textContent = `${state.data.creditPayments.length} records`;
+            document.getElementById('ageDataStatus').textContent = `${state.data.ageAnalysis.length} records`;
+            document.getElementById('bankDataStatus').textContent = `${state.data.bankStatements.length} records`;
+        }
+
+        function updateKPIs() {
+            // Revenue from account transactions
+            const revenue = state.data.accountTxns.reduce((sum, t) => sum + t.amount, 0);
+            document.getElementById('kpiRevenue').textContent = formatCurrency(revenue);
+            
+            // Payments from credit analysis
+            const payments = state.data.creditPayments.reduce((sum, p) => sum + p.amount, 0);
+            document.getElementById('kpiPayments').textContent = formatCurrency(payments);
+            
+            // Outstanding from age analysis
+            const outstanding = state.data.ageAnalysis.reduce((sum, a) => sum + a.total, 0);
+            document.getElementById('kpiOutstanding').textContent = formatCurrency(outstanding);
+            
+            // Collection rate
+            const collectionRate = revenue > 0 ? (payments / revenue) * 100 : 0;
+            document.getElementById('kpiCollectionRate').textContent = `${collectionRate.toFixed(1)}%`;
+        }
+
+        function updateAccountGroups() {
+            updateMedicalAidGroups();
+            updateOtherAccountGroups();
+        }
+
+        function updateMedicalAidGroups() {
+            const container = document.getElementById('medicalAidGroups');
+            container.innerHTML = '';
+            
+            const sortedSchemes = Array.from(state.data.medicalAidSchemes.entries())
+                .sort((a, b) => b[1].total - a[1].total);
+            
+            if (sortedSchemes.length === 0) {
+                container.innerHTML = '<div class="text-gray-400 text-sm">No medical aid data available</div>';
+                return;
+            }
+            
+            sortedSchemes.forEach(([scheme, data]) => {
+                const element = createAccountGroupElement(scheme, data);
+                container.appendChild(element);
+            });
+        }
+
+        function updateOtherAccountGroups() {
+            const container = document.getElementById('otherAccountGroups');
+            container.innerHTML = '';
+            
+            const otherGroups = Array.from(state.data.accountGroups.entries())
+                .filter(([group]) => !Object.values(accountGroupConfig.medicalAids).includes(group))
+                .sort((a, b) => b[1].total - a[1].total);
+            
+            if (otherGroups.length === 0) {
+                container.innerHTML = '<div class="text-gray-400 text-sm">No other account data available</div>';
+                return;
+            }
+            
+            otherGroups.forEach(([group, data]) => {
+                const element = createAccountGroupElement(group, data);
+                container.appendChild(element);
+            });
+        }
+
+        function createAccountGroupElement(name, data) {
+            const div = document.createElement('div');
+            div.className = 'bg-gray-800 rounded-lg p-3';
+            
+            const total = data.total;
+            const over90 = data.days90 + data.days120 + data.days150;
+            const over90Percent = total > 0 ? (over90 / total) * 100 : 0;
+            
+            div.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <span class="font-medium text-sm">${name}</span>
+                    <span class="font-bold">${formatCurrency(total)}</span>
+                </div>
+                <div class="grid grid-cols-4 gap-1 text-xs mb-2">
+                    <div class="text-center">
+                        <div class="text-green-400 font-semibold">Current</div>
+                        <div>${formatCurrency(data.current)}</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-yellow-400 font-semibold">30d</div>
+                        <div>${formatCurrency(data.days30)}</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-orange-400 font-semibold">60d</div>
+                        <div>${formatCurrency(data.days60)}</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-red-400 font-semibold">90d+</div>
+                        <div>${formatCurrency(over90)}</div>
+                    </div>
+                </div>
+                ${over90Percent > 20 ? `
+                    <div class="mt-2 text-xs text-red-400 bg-red-400/10 p-1 rounded text-center">
+                        <i class="fas fa-exclamation-triangle mr-1"></i> ${over90Percent.toFixed(1)}% over 90 days
+                    </div>
+                ` : ''}
+            `;
+            
+            return div;
+        }
+
+        // Enhanced aging analysis functions
+        function updateAgingAnalysis() {
+            updateAgingKPIs();
+            updateAgingChart();
+            updatePrioritySummary();
+            updateImmediateActions();
+            updateAgingTable();
+            updateWeeklyWorkflow();
+        }
+
+        function updateAgingKPIs() {
+            const totalOutstanding = state.data.ageAnalysis.reduce((sum, a) => sum + a.total, 0);
+            const overdue90 = state.data.ageAnalysis.reduce((sum, a) => sum + a.days90 + a.days120 + a.days150, 0);
+            const overdue90Percent = totalOutstanding > 0 ? (overdue90 / totalOutstanding) * 100 : 0;
+            const highPriorityCount = state.data.ageAnalysis.filter(a => a.priority === 'High').length;
+            const totalAccounts = state.data.ageAnalysis.reduce((sum, a) => sum + a.count, 0);
+            
+            // Calculate collection rate based on payments vs aging
+            const totalPayments = state.data.creditPayments.reduce((sum, p) => sum + p.amount, 0);
+            const collectionRate = totalOutstanding > 0 ? 
+                (totalPayments / (totalOutstanding + totalPayments)) * 100 : 0;
+
+            document.getElementById('totalOutstanding').textContent = formatCurrency(totalOutstanding);
+            document.getElementById('overdue90').textContent = formatCurrency(overdue90);
+            document.getElementById('overdue90Percent').textContent = `${overdue90Percent.toFixed(1)}% of total`;
+            document.getElementById('highPriorityCount').textContent = highPriorityCount.toString();
+            document.getElementById('accountCount').textContent = `${totalAccounts} accounts`;
+            document.getElementById('agingCollectionRate').textContent = `${collectionRate.toFixed(1)}%`;
+        }
+
+        function updateAgingChart() {
+            const ctx = document.getElementById('agingChart');
+            if (!ctx) return;
+
+            // Destroy existing chart if it exists
+            if (window.agingChartInstance) {
+                window.agingChartInstance.destroy();
+            }
+
+            const totals = state.data.ageAnalysis.reduce((acc, item) => {
+                acc.current += item.current;
+                acc.days30 += item.days30;
+                acc.days60 += item.days60;
+                acc.days90 += item.days90;
+                acc.days120 += item.days120;
+                acc.days150 += item.days150;
+                return acc;
+            }, { current: 0, days30: 0, days60: 0, days90: 0, days120: 0, days150: 0 });
+
+            window.agingChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Current', '30 Days', '60 Days', '90 Days', '120 Days', '150+ Days'],
+                    datasets: [{
+                        label: 'Amount Outstanding',
+                        data: [totals.current, totals.days30, totals.days60, totals.days90, totals.days120, totals.days150],
+                        backgroundColor: [
+                            '#10B981', '#3B82F6', '#F59E0B', '#F97316', '#EF4444', '#7C3AED'
+                        ],
+                        borderColor: [
+                            '#10B981', '#3B82F6', '#F59E0B', '#F97316', '#EF4444', '#7C3AED'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `R ${context.parsed.y.toLocaleString()}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return 'R ' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updatePrioritySummary() {
+            const container = document.getElementById('prioritySummary');
+            if (state.data.ageAnalysis.length === 0) {
+                container.innerHTML = '<div class="text-gray-400 text-sm">Load age analysis data to view</div>';
+                return;
+            }
+
+            const priorities = state.data.ageAnalysis.reduce((acc, item) => {
+                acc[item.priority] = (acc[item.priority] || 0) + 1;
+                return acc;
+            }, {});
+
+            const totalAmounts = state.data.ageAnalysis.reduce((acc, item) => {
+                acc[item.priority] = (acc[item.priority] || 0) + item.total;
+                return acc;
+            }, {});
+
+            container.innerHTML = `
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                        <div>
+                            <div class="font-semibold text-red-400">High Priority</div>
+                            <div class="text-xs text-gray-400">${priorities.High || 0} accounts</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold">${formatCurrency(totalAmounts.High || 0)}</div>
+                            <div class="text-xs text-red-400">Immediate action</div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-center p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+                        <div>
+                            <div class="font-semibold text-orange-400">Medium Priority</div>
+                            <div class="text-xs text-gray-400">${priorities.Medium || 0} accounts</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold">${formatCurrency(totalAmounts.Medium || 0)}</div>
+                            <div class="text-xs text-orange-400">This week</div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-center p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                        <div>
+                            <div class="font-semibold text-green-400">Low Priority</div>
+                            <div class="text-xs text-gray-400">${priorities.Low || 0} accounts</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold">${formatCurrency(totalAmounts.Low || 0)}</div>
+                            <div class="text-xs text-green-400">Scheduled</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateImmediateActions() {
+            const container = document.getElementById('immediateAction');
+            const highPriorityItems = state.data.ageAnalysis
+                .filter(item => item.priority === 'High')
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 5); // Show top 5
+
+            if (highPriorityItems.length === 0) {
+                container.innerHTML = '<div class="text-green-400 text-sm">No immediate actions required</div>';
+                return;
+            }
+
+            container.innerHTML = highPriorityItems.map(item => `
+                <div class="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <div class="font-medium text-sm">${item.entity}</div>
+                            <div class="text-xs text-gray-400">${item.accountGroup}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold">${formatCurrency(item.total)}</div>
+                            <div class="text-xs text-red-400">${item.count} accounts</div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-1 text-xs">
+                        <div class="text-center">
+                            <div class="text-orange-400">90+ Days</div>
+                            <div>${formatCurrency(item.days90 + item.days120 + item.days150)}</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-yellow-400">60-90 Days</div>
+                            <div>${formatCurrency(item.days60)}</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-green-400">Current</div>
+                            <div>${formatCurrency(item.current)}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateAgingTable() {
+            const tbody = document.getElementById('agingTableBody');
+            if (state.data.ageAnalysis.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center text-gray-400 py-4">Load age analysis data to view details</td></tr>';
+                return;
+            }
+
+            const sortedData = state.data.ageAnalysis.sort((a, b) => {
+                // Sort by priority (High first) then by total amount (descending)
+                const priorityOrder = { 'High': 3, 'Medium': 2, 'Low': 1 };
+                return (priorityOrder[b.priority] - priorityOrder[a.priority]) || (b.total - a.total);
+            });
+
+            tbody.innerHTML = sortedData.map(item => `
+                <tr class="hover:bg-gray-800/50">
+                    <td class="font-medium">${item.entity}</td>
+                    <td>${item.count}</td>
+                    <td class="font-bold">${formatCurrency(item.total)}</td>
+                    <td>${formatCurrency(item.current)}</td>
+                    <td>${formatCurrency(item.days30)}</td>
+                    <td>${formatCurrency(item.days60)}</td>
+                    <td>${formatCurrency(item.days90)}</td>
+                    <td>${formatCurrency(item.days120)}</td>
+                    <td>${formatCurrency(item.days150)}</td>
+                    <td>
+                        <span class="px-2 py-1 rounded-full text-xs ${
+                            item.priority === 'High' ? 'bg-red-500/20 text-red-400' :
+                            item.priority === 'Medium' ? 'bg-orange-500/20 text-orange-400' :
+                            'bg-green-500/20 text-green-400'
+                        }">
+                            ${item.priority}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function updateWeeklyWorkflow() {
+            const container = document.getElementById('weeklyWorkflow');
+            const hasData = state.data.ageAnalysis.length > 0;
+            
+            const status = hasData ? 
+                '<span class="text-green-400 text-xs">Ready</span>' : 
+                '<span class="text-gray-400 text-xs">Pending Data</span>';
+
+            container.innerHTML = `
+                <div class="flex items-center justify-between p-3 bg-blue-500/10 rounded-lg">
+                    <span>Monday: Export data & generate reports</span>
+                    ${status}
+                </div>
+                <div class="flex items-center justify-between p-3 bg-blue-500/10 rounded-lg">
+                    <span>Tuesday-Thursday: Follow-up actions</span>
+                    ${hasData ? '<span class="text-yellow-400 text-xs">In Progress</span>' : '<span class="text-gray-400 text-xs">Pending</span>'}
+                </div>
+                <div class="flex items-center justify-between p-3 bg-blue-500/10 rounded-lg">
+                    <span>Friday: Progress update & planning</span>
+                    <span class="text-gray-400 text-xs">Pending</span>
+                </div>
+            `;
+        }
+
+        function exportAgingReport() {
+            if (state.data.ageAnalysis.length === 0) {
+                showToast('No aging data available', 'Load age analysis data first', 'warning');
+                return;
+            }
+
+            const report = {
+                timestamp: new Date().toISOString(),
+                summary: {
+                    totalOutstanding: state.data.ageAnalysis.reduce((sum, a) => sum + a.total, 0),
+                    totalAccounts: state.data.ageAnalysis.reduce((sum, a) => sum + a.count, 0),
+                    overdue90: state.data.ageAnalysis.reduce((sum, a) => sum + a.days90 + a.days120 + a.days150, 0),
+                    highPriorityCount: state.data.ageAnalysis.filter(a => a.priority === 'High').length
+                },
+                detailedAnalysis: state.data.ageAnalysis,
+                generatedBy: 'Finance Pro Dashboard',
+                exportDate: new Date().toLocaleDateString()
+            };
+
+            const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `aging-analysis-report-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showToast('Aging report exported', 'Detailed aging analysis downloaded', 'success');
+        }
+
+        function printAgingReport() {
+            window.print();
+        }
+
+        // Payment matching functionality
+        function matchPaymentsToBankStatements() {
+            let matchesFound = 0;
+            
+            // Reset previous matches
+            state.data.creditPayments.forEach(payment => {
+                payment.matched = false;
+                payment.matchedTo = null;
+            });
+            
+            state.data.bankStatements.forEach(bankTx => {
+                bankTx.matched = false;
+                bankTx.matchedTo = null;
+            });
+
+            // Match by amount and date (exact match)
+            state.data.creditPayments.forEach(payment => {
+                if (payment.matched) return;
+                
+                const matchingBankTx = state.data.bankStatements.find(bankTx => 
+                    !bankTx.matched &&
+                    Math.abs(bankTx.amount - payment.amount) < 0.01 && // Exact amount match
+                    Math.abs((bankTx.date - payment.date) / (1000 * 60 * 60 * 24)) < 2 && // Within 2 days
+                    bankTx.type === 'credit'
+                );
+                
+                if (matchingBankTx) {
+                    payment.matched = true;
+                    payment.matchedTo = matchingBankTx.reference || 'Bank Statement';
+                    matchingBankTx.matched = true;
+                    matchingBankTx.matchedTo = payment.reference || 'Payment Record';
+                    matchesFound++;
+                }
+            });
+
+            // Match by amount only (for cases where dates don't align perfectly)
+            state.data.creditPayments.forEach(payment => {
+                if (payment.matched) return;
+                
+                const matchingBankTx = state.data.bankStatements.find(bankTx => 
+                    !bankTx.matched &&
+                    Math.abs(bankTx.amount - payment.amount) < 0.01 &&
+                    bankTx.type === 'credit'
+                );
+                
+                if (matchingBankTx) {
+                    payment.matched = true;
+                    payment.matchedTo = matchingBankTx.reference || 'Bank Statement';
+                    matchingBankTx.matched = true;
+                    matchingBankTx.matchedTo = payment.reference || 'Payment Record';
+                    matchesFound++;
+                }
+            });
+
+            return matchesFound;
+        }
+
+        function runReconciliation() {
+            if (state.data.creditPayments.length === 0) {
+                showToast('No payment data available', 'Load credit analysis data first', 'warning');
+                return;
+            }
+            
+            if (state.data.bankStatements.length === 0) {
+                showToast('No bank statement data available', 'Load bank statements first', 'warning');
+                return;
+            }
+            
+            const matchesFound = matchPaymentsToBankStatements();
+            updateReconciliationDisplay();
+            
+            showToast(`Reconciliation complete`, `${matchesFound} matches found`, 'success');
+        }
+
+        function updateReconciliationDisplay() {
+            // Update KPIs
+            const totalPayments = state.data.creditPayments.reduce((sum, p) => sum + p.amount, 0);
+            const bankDeposits = state.data.bankStatements
+                .filter(tx => tx.type === 'credit')
+                .reduce((sum, tx) => sum + tx.amount, 0);
+            
+            const matchedPayments = state.data.creditPayments.filter(p => p.matched);
+            const matchRate = state.data.creditPayments.length > 0 ? 
+                (matchedPayments.length / state.data.creditPayments.length) * 100 : 0;
+            
+            document.getElementById('totalPayments').textContent = formatCurrency(totalPayments);
+            document.getElementById('bankDeposits').textContent = formatCurrency(bankDeposits);
+            document.getElementById('matchRate').textContent = `${matchRate.toFixed(1)}%`;
+            
+            // Update unmatched payments
+            const unmatchedPaymentsContainer = document.getElementById('unmatchedPayments');
+            const unmatchedPayments = state.data.creditPayments.filter(p => !p.matched);
+            
+            if (unmatchedPayments.length === 0) {
+                unmatchedPaymentsContainer.innerHTML = '<div class="text-green-400 text-sm">All payments matched!</div>';
+            } else {
+                unmatchedPaymentsContainer.innerHTML = unmatchedPayments.map(payment => `
+                    <div class="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="font-medium text-sm">${payment.description}</div>
+                                <div class="text-xs text-gray-400">${payment.date.toLocaleDateString()}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold">${formatCurrency(payment.amount)}</div>
+                                <div class="text-xs text-red-400">Unmatched</div>
+                            </div>
+                        </div>
+                        ${payment.reference ? `<div class="text-xs mt-1">Ref: ${payment.reference}</div>` : ''}
+                    </div>
+                `).join('');
+            }
+            
+            // Update unmatched bank transactions
+            const unmatchedBankContainer = document.getElementById('unmatchedBankTx');
+            const unmatchedBankTx = state.data.bankStatements
+                .filter(tx => !tx.matched && tx.type === 'credit');
+            
+            if (unmatchedBankTx.length === 0) {
+                unmatchedBankContainer.innerHTML = '<div class="text-green-400 text-sm">All bank transactions matched!</div>';
+            } else {
+                unmatchedBankContainer.innerHTML = unmatchedBankTx.map(tx => `
+                    <div class="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="font-medium text-sm">${tx.description}</div>
+                                <div class="text-xs text-gray-400">${tx.date.toLocaleDateString()}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold">${formatCurrency(tx.amount)}</div>
+                                <div class="text-xs text-yellow-400">Unmatched</div>
+                            </div>
+                        </div>
+                        ${tx.reference ? `<div class="text-xs mt-1">Ref: ${tx.reference}</div>` : ''}
+                    </div>
+                `).join('');
+            }
+        }
+
+        function exportReconciliationReport() {
+            const report = {
+                timestamp: new Date().toISOString(),
+                reconciliation: {
+                    totalPayments: state.data.creditPayments.reduce((sum, p) => sum + p.amount, 0),
+                    totalBankDeposits: state.data.bankStatements
+                        .filter(tx => tx.type === 'credit')
+                        .reduce((sum, tx) => sum + tx.amount, 0),
+                    matchedPayments: state.data.creditPayments.filter(p => p.matched).length,
+                    totalPaymentsCount: state.data.creditPayments.length,
+                    matchRate: state.data.creditPayments.length > 0 ? 
+                        (state.data.creditPayments.filter(p => p.matched).length / state.data.creditPayments.length) * 100 : 0
+                },
+                unmatchedPayments: state.data.creditPayments.filter(p => !p.matched),
+                unmatchedBankTransactions: state.data.bankStatements.filter(tx => !tx.matched && tx.type === 'credit'),
+                matchedTransactions: state.data.creditPayments.filter(p => p.matched).map(payment => ({
+                    payment: payment,
+                    bankTransaction: state.data.bankStatements.find(tx => tx.matchedTo === (payment.reference || 'Payment Record'))
+                }))
+            };
+            
+            const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `reconciliation-report-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showToast('Reconciliation report exported', 'Detailed matching report downloaded', 'success');
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(tabName).classList.add('active');
+            
+            updateTabHeader(tabName);
+            state.currentTab = tabName;
+        }
+
+        function updateTabHeader(tabName) {
+            const titles = {
+                overview: 'Financial Overview',
+                revenue: 'Revenue Analysis',
+                payments: 'Payments Analysis',
+                aging: 'Aging Analysis & Collections',
+                reconciliation: 'Payment Reconciliation'
+            };
+            
+            const subtitles = {
+                overview: 'Complete practice financial intelligence',
+                revenue: 'Analyze income trends and sources',
+                payments: 'Track payments and receivables',
+                aging: 'Monitor outstanding debt aging and collections',
+                reconciliation: 'Match payments to bank deposits'
+            };
+            
+            document.getElementById('currentTabTitle').textContent = titles[tabName];
+            document.getElementById('currentTabSubtitle').textContent = subtitles[tabName];
+        }
+
+        function formatCurrency(amount) {
+            if (amount === 0) return 'R 0';
+            if (amount < 1000) return 'R ' + Math.round(amount);
+            return 'R ' + Math.round(amount).toLocaleString();
+        }
+
+        function showToast(message, subtext = '', type = 'info') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toastIcon');
+            const toastMessage = document.getElementById('toastMessage');
+            const toastSubtext = document.getElementById('toastSubtext');
+
+            const icons = {
+                info: 'fa-info-circle text-blue-400',
+                success: 'fa-check-circle text-green-400',
+                warning: 'fa-exclamation-triangle text-yellow-400',
+                error: 'fa-times-circle text-red-400'
+            };
+
+            icon.className = `fas ${icons[type]}`;
+            toastMessage.textContent = message;
+            toastSubtext.textContent = subtext;
+
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 5000);
+        }
+
+        function loadSampleData() {
+            console.log('Loading sample data...');
+            
+            // Create comprehensive sample data
+            const sampleAccounts = [
+                ['Amount', 'Service date', 'Description', 'Doc. number', 'Account holder', 'Medical scheme'],
+                [-4010.2, '16/10/2025', 'Payment received: EFT: Medical scheme', 'DH', 'MARX PD MR (PETRUS DANIEL)', 'DISCOVERY'],
+                [-500, '01/10/2025', 'Payment received: EFT: Patient', 'BF1110', 'BRANDT A MS (ANICKA)', 'BONITAS'],
+                [-500, '07/10/2025', 'Payment received: EFT: Patient', 'BF1217', 'PRETORIUS J MAST (JUAN-JACQUES)', 'MOMENTUM'],
+                [-400, '24/10/2025', 'Payment received: EFT: Patient', 'BF1478', 'DE VRIES ME MRS (MARIA E)', 'UMVUZO'],
+                [-500, '27/10/2025', 'Payment received: EFT: Patient', 'BF1105', 'GROBLER JHP MR (JOHANNES HENDRIK PETRUS)', 'BONITAS']
+            ];
+
+            const sampleCredits = [
+                ['Date', 'Description', 'Amount'],
+                ['2023-10-01', 'DISCOVERY PAYMENT RECEIVED', 120000],
+                ['2023-10-02', 'BONITAS PAYMENT', 85000],
+                ['2023-10-03', 'CASH DEPOSIT', 15000],
+                ['2023-10-04', 'GEMS PAYMENT RECEIPT', 72000],
+                ['2023-10-05', 'MOMENTUM EFT', 65000]
+            ];
+
+            const sampleAging = [
+                ['Account Group', 'Count', 'Total Balance', 'Current', '30 Days', '60 Days', '90 Days', '120 Days', '150+ Days'],
+                ['PT LIABLE COPAY', 45, 85200.00, 15230.00, 12450.00, 18760.00, 14320.00, 9840.00, 14600.00],
+                ['COID', 8, 56450.50, 8200.00, 6750.00, 12300.50, 9850.00, 7150.00, 12200.00],
+                ['PMB', 28, 187340.75, 45680.25, 32150.50, 38760.00, 28450.00, 22300.00, 20000.00],
+                ['AFS FOLLOW UP', 12, 92180.30, 12500.00, 15680.30, 18900.00, 16250.00, 14850.00, 14000.00]
+            ];
+
+            const sampleBank = [
+                ['Date', 'Description', 'Amount', 'Reference'],
+                ['2023-10-01', 'DISCOVERY HEALTH EFT', 120000, 'EFT12345'],
+                ['2023-10-02', 'BONITAS MEDICAL AID', 85000, 'EFT12346'],
+                ['2023-10-03', 'CASH DEPOSIT', 15000, 'CASH001'],
+                ['2023-10-04', 'GEMS PAYMENT', 72000, 'EFT12347'],
+                ['2023-10-05', 'MOMENTUM HEALTH', 65000, 'EFT12348']
+            ];
+
+            try {
+                // Process sample data
+                processFileData(sampleAccounts, 'account', 'sample-accounts.xlsx');
+                processFileData(sampleCredits, 'credit', 'sample-credits.xlsx');
+                processFileData(sampleAging, 'age', 'sample-aging.xlsx');
+                processBankStatementData(sampleBank, 'sample-bank.xlsx');
+
+                // Update UI
+                updateFileStatus('account', 1);
+                updateFileStatus('credit', 1);
+                updateFileStatus('age', 1);
+                updateFileStatus('bank', 1);
+                updateDataStatus();
+                updateKPIs();
+                updateAccountGroups();
+                updateAgingAnalysis();
+                updateReconciliationDisplay();
+
+                showToast('Sample data loaded successfully', 'Complete dashboard is now functional with sample data', 'success');
+                console.log('Sample data loaded successfully. Account transactions:', state.data.accountTxns.length);
+                
+            } catch (error) {
+                console.error('Error loading sample data:', error);
+                showToast('Error loading sample data', error.message, 'error');
+            }
+        }
+
+      function toggleTheme() {
+    const body = document.body;
+    const isLight = body.classList.toggle('light-theme');
+
+    const newTheme = isLight ? 'light' : 'dark';
+    localStorage.setItem('theme', newTheme);
+    updateThemeIcon(newTheme);
+}
+
+function updateThemeIcon(theme) {
+    const icon = document.querySelector('#mobileMenuBtn i');
+    if (!icon) return;
+    icon.className = theme === 'light' ? 'fas fa-sun' : 'fas fa-moon';
+}
+
+        }
+
+        function exportDashboard() {
+            const report = {
+                timestamp: new Date().toISOString(),
+                practice: 'MedPractice Inc.',
+                data: {
+                    accountTxns: state.data.accountTxns,
+                    creditPayments: state.data.creditPayments,
+                    ageAnalysis: state.data.ageAnalysis,
+                    bankStatements: state.data.bankStatements,
+                    accountGroups: Object.fromEntries(state.data.accountGroups),
+                    medicalAidSchemes: Object.fromEntries(state.data.medicalAidSchemes)
+                }
+            };
+            
+            const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `financial-dashboard-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showToast('Dashboard exported', 'Financial data downloaded as JSON', 'success');
+        }
+
+        function printDashboard() {
+            window.print();
+        }
+
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(function(registration) {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(function(error) {
+                        console.log('ServiceWorker registration failed: ', error);
+                    });
+            });
+        }
+
+        // Test function for your specific file format
+        function testWithFernandesData() {
+            // Simulate your file structure for testing
+            const testData = [
+                ['Amount', 'Service date', 'Description', 'Doc. number', 'Account holder', 'Medical scheme'],
+                [-4010.2, '16/10/2025', 'Payment received: EFT: Medical scheme', 'DH', 'MARX PD MR (PETRUS DANIEL)', 'DISCOVERY'],
+                [-500, '01/10/2025', 'Payment received: EFT: Patient', 'BF1110', 'BRANDT A MS (ANICKA)', 'BONITAS']
+            ];
+            
+            console.log('Testing with Fernandes data format...');
+            processFileData(testData, 'account', 'test-fernandes.xlsx');
+            updateDataStatus();
+            updateKPIs();
+function summarizeData() {
+    let summary = [];
+
+    // Total Revenue & Payments
+    const revenue = state.data.accountTxns.reduce((sum, t) => sum + t.amount, 0);
+    const payments = state.data.creditPayments.reduce((sum, p) => sum + p.amount, 0);
+    const outstanding = state.data.ageAnalysis.reduce((sum, a) => sum + a.total, 0);
+
+    const collectionRate = revenue > 0 ? (payments / revenue) * 100 : 0;
+
+    summary.push(`💰 Revenue: ${formatCurrency(revenue)} | 💳 Payments: ${formatCurrency(payments)} (${collectionRate.toFixed(1)}%)`);
+
+    // Most Common Payer (Credit Payments)
+    const payerMap = {};
+    state.data.creditPayments.forEach(p => {
+        const desc = p.description.trim();
+        payerMap[desc] = (payerMap[desc] || 0) + p.amount;
+    });
+
+    const topPayer = Object.entries(payerMap).sort((a, b) => b[1] - a[1])[0];
+    if (topPayer) {
+        summary.push(`👤 Top Payer: ${topPayer[0]} (${formatCurrency(topPayer[1])})`);
+    }
+
+    // Top Outstanding Group
+    const groupTotals = Array.from(state.data.accountGroups.entries())
+        .map(([group, data]) => ({ group, total: data.total }))
+        .sort((a, b) => b.total - a.total);
+
+    if (groupTotals.length) {
+        summary.push(`📊 Highest Debt Group: ${groupTotals[0].group} (${formatCurrency(groupTotals[0].total)})`);
+    }
+
+    // Average Aging
+    const avgAging = state.data.ageAnalysis.reduce((sum, a) => {
+        const weightedSum = a.days30 + (2 * a.days60) + (3 * a.days90) + (4 * a.days120) + (5 * a.days150);
+        return sum + weightedSum;
+    }, 0) / (state.data.ageAnalysis.length || 1);
+
+    summary.push(`📅 Avg Aging Weight: ${avgAging.toFixed(1)} pts`);
+
+    // Overdue %
+    const overdue = state.data.ageAnalysis.reduce((sum, a) => sum + a.days90 + a.days120 + a.days150, 0);
+    const overduePercent = outstanding > 0 ? (overdue / outstanding) * 100 : 0;
+    summary.push(`⚠️ Overdue (>90d): ${formatCurrency(overdue)} (${overduePercent.toFixed(1)}%)`);
+
+    displaySummary(summary);
+}
+
+function displaySummary(items) {
+    const toast = document.getElementById('toast');
+    const icon = document.getElementById('toastIcon');
+    const message = document.getElementById('toastMessage');
+    const subtext = document.getElementById('toastSubtext');
+
+    icon.className = 'fas fa-chart-pie text-yellow-400';
+    message.textContent = 'Quick Summary';
+    subtext.innerHTML = items.map(i => `• ${i}`).join('<br>');
+
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 10000);
+summarizeData();
+
+}
+        }
+<script>
+    // Global state
+    const state = {
+        currentTab: 'overview',
+        data: {
+            accountTxns: [],
+            creditPayments: [],
+            ageAnalysis: [],
+            bankStatements: [],
+            accountGroups: new Map(),
+            medicalAidSchemes: new Map()
+        },
+        fileStatus: {
+            account: false,
+            credit: false,
+            age: false,
+            bank: false
+        }
+    };
+
+    // Account group configuration
+    const accountGroupConfig = {
+        medicalAids: {
+            'DISCOVERY': 'Discovery Health',
+            'BONITAS': 'Bonitas',
+            'GEMS': 'GEMS',
+            'MOMENTUM': 'Momentum Health',
+            'FEDHEALTH': 'FedHealth',
+            'MEDSHIELD': 'Medshield',
+            'KEYHEALTH': 'KeyHealth',
+            'BESTMED': 'Bestmed',
+            'BANKMED': 'Bankmed',
+            'POLMED': 'Polmed',
+            'MEDIHELP': 'Medihelp',
+            'UMVUZO': 'Umvuzo Health',
+            'SIZWE': 'Sizwe Hosmed'
+        },
+        otherGroups: {
+            'CASH': 'Cash Patients',
+            'PATIENT': 'Patient Payments',
+            'EFT': 'EFT Payments',
+            'CREDIT CARD': 'Credit Card',
+            'DEBIT ORDER': 'Debit Order',
+            'REFUND': 'Refunds',
+            'ADJUSTMENT': 'Adjustments'
+        },
+        agingGroups: {
+            'PT LIABLE COPAY': 'Patient Liable Copay',
+            'COID': 'Compensation Fund',
+            'PMB': 'Prescribed Minimum Benefits',
+            'AFS FOLLOW UP': 'AFS Follow Up',
+            'PT LIABLE LO': 'Patient Liable Late Payment',
+            'MONTHLY REPAYMENT': 'Monthly Repayment Plan',
+            'PRIVATE': 'Private Patients',
+            'OTHER': 'Other Accounts'
+        },
+        bankKeywords: {
+            'EFT': 'EFT Payment',
+            'DEBIT CARD': 'Card Payment',
+            'CREDIT CARD': 'Card Payment',
+            'FEE': 'Bank Fees',
+            'COMMISSION': 'Bank Charges',
+            'SERVICE CHARGE': 'Bank Charges'
+        }
+    };
+
+    // Initialize application
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Finance Pro: Application starting...');
+        initializeEventListeners();
+        showToast('Welcome to Finance Pro', 'Load your financial data or use sample data to begin');
+    });
+
+    function initializeEventListeners() {
+        // Navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const tab = this.getAttribute('data-tab');
+                switchTab(tab);
+            });
+        });
+
+        // File uploads
+        setupFileUpload('accDropZone', 'accFileInput', 'account');
+        setupFileUpload('creditDropZone', 'creditFileInput', 'credit');
+        setupFileUpload('ageDropZone', 'ageFileInput', 'age');
+        setupFileUpload('bankDropZone', 'bankFileInput', 'bank');
+
+        // Mobile menu
+        document.getElementById('mobileMenuBtn').addEventListener('click', function() {
+            document.querySelector('.sidebar').classList.toggle('open');
+        });
+    }
+
+    function setupFileUpload(dropZoneId, fileInputId, type) {
+        const dropZone = document.getElementById(dropZoneId);
+        const fileInput = document.getElementById(fileInputId);
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFileUpload(e.dataTransfer.files, type);
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            handleFileUpload(e.target.files, type);
+        });
+    }
+
+    async function handleFileUpload(files, type) {
+        if (!files || files.length === 0) return;
+
+        const statusElement = document.getElementById(`${type}FileStatus`);
+        const progressBar = document.getElementById(`${type}ProgressBar`);
+        const progressFill = document.getElementById(`${type}ProgressFill`);
+
+        // Show loading state
+        statusElement.innerHTML = `<span class="text-blue-400"><div class="loading-spinner"></div> Processing ${files.length} file(s)...</span>`;
+        if (progressBar) progressBar.classList.remove('hidden');
+        if (progressFill) progressFill.style.width = '10%';
+
+        try {
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const progress = 10 + ((i + 1) / files.length) * 80;
+                if (progressFill) progressFill.style.width = `${progress}%`;
+
+                console.log(`Processing ${type} file:`, file.name);
+                const data = await parseExcelFile(file);
+                console.log(`Parsed data for ${type}:`, data);
+                
+                if (type === 'bank') {
+                    processBankStatementData(data, file.name);
+                } else {
+                    processFileData(data, type, file.name);
+                }
+            }
+
+            // Final progress
+            if (progressFill) progressFill.style.width = '100%';
+
+            updateFileStatus(type, files.length);
+            updateDataStatus();
+            updateKPIs();
+            updateAccountGroups();
+            
+            // Update specific analysis based on data type
+            if (type === 'age') {
+                updateAgingAnalysis();
+            }
+            if (type === 'bank' || type === 'credit') {
+                updateReconciliationDisplay();
+            }
+
+            statusElement.innerHTML = `<span class="text-green-400"><i class="fas fa-check-circle"></i> Successfully loaded ${files.length} file(s)</span>`;
+            showToast('File processed successfully', `${files.length} ${type} file(s) loaded`, 'success');
+            
+        } catch (error) {
+            console.error(`Error processing ${type} file:`, error);
+            statusElement.innerHTML = `<span class="text-red-400"><i class="fas fa-exclamation-circle"></i> Error: ${error.message}</span>`;
+            showToast('Error processing file', error.message, 'error');
+        } finally {
+            setTimeout(() => {
+                if (progressBar) progressBar.classList.add('hidden');
+            }, 2000);
+        }
+    }
+
+    function parseExcelFile(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    console.log('File read successfully, size:', e.target.result.byteLength);
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    console.log('Workbook sheets:', workbook.SheetNames);
+                    
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                    console.log('Parsed JSON data:', jsonData);
+                    
+                    resolve(jsonData);
+                } catch (error) {
+                    console.error('Error parsing Excel file:', error);
+                    reject(new Error('Invalid file format - please upload valid Excel or CSV files'));
+                }
+            };
+            
+            reader.onerror = (error) => {
+                console.error('FileReader error:', error);
+                reject(new Error('Failed to read file - file may be corrupted'));
+            };
+            
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    function debugFileData(data, filename) {
+        console.log(`=== DEBUG: ${filename} ===`);
+        console.log('Total rows:', data.length);
+        if (data.length > 0) {
+            console.log('Headers:', data[0]);
+            console.log('First few rows:');
+            
+            for (let i = 1; i < Math.min(5, data.length); i++) {
+                console.log(`Row ${i}:`, data[i]);
+            }
+            
+            // Log column indices found
+            const headers = data[0] || [];
+            console.log('Column Analysis:');
+            console.log('- Amount column:', findColumnIndex(headers, ['amount', 'paid']));
+            console.log('- Date column:', findColumnIndex(headers, ['service date', 'create date']));
+            console.log('- Description column:', findColumnIndex(headers, ['description', 'ledger']));
+        }
+        console.log('=== END DEBUG ===');
+    }
+
+    function processFileData(data, type, filename) {
+        console.log(`Processing ${type} data from ${filename}`);
+        
+        // Add debug logging
+        debugFileData(data, filename);
+        
+        if (!data || data.length === 0) {
+            throw new Error('File is empty or contains no data');
+        }
+
+        // Clear previous data for this type
+        switch (type) {
+            case 'account':
+                state.data.accountTxns = [];
+                break;
+            case 'credit':
+                state.data.creditPayments = [];
+                break;
+            case 'age':
+                state.data.ageAnalysis = [];
+                state.data.accountGroups.clear();
+                state.data.medicalAidSchemes.clear();
+                break;
+        }
+
+        let processedRows = 0;
+        const headers = data[0] || [];
+        console.log('Processing headers:', headers);
+
+        for (let i = 1; i < data.length; i++) {
+            const row = data[i];
+            if (!row || row.length === 0) continue;
+
+            try {
+                switch (type) {
+                    case 'account':
+                        if (processAccountRow(row, headers)) processedRows++;
+                        break;
+                    case 'credit':
+                        if (processCreditRow(row, headers)) processedRows++;
+                        break;
+                    case 'age':
+                        if (processAgeRow(row, headers)) processedRows++;
+                        break;
+                }
+            } catch (error) {
+                console.warn(`Error processing row ${i}:`, row, error);
+            }
+        }
+
+        console.log(`Processed ${processedRows} valid rows for ${type}`);
+        
+        if (processedRows === 0) {
+            // Provide more helpful error message
+            const errorMsg = `No valid data found in file. Please check:
+            - File contains data beyond headers
+            - Amount, Date, and Description columns exist
+            - Data is in the expected format`;
+            throw new Error(errorMsg);
+        }
+
+        state.fileStatus[type] = true;
+        console.log(`Final ${type} data count:`, state.data[type === 'account' ? 'accountTxns' : type === 'credit' ? 'creditPayments' : 'ageAnalysis'].length);
+    }
+
+    function processAccountRow(row, headers) {
+        console.log('Processing row:', row);
+        console.log('Headers:', headers);
+        
+        // Enhanced column detection for your specific Excel format
+        const amountIndex = findColumnIndex(headers, ['amount', 'paid', 'nett amount']);
+        const dateIndex = findColumnIndex(headers, ['service date', 'create date', 'date']);
+        const descIndex = findColumnIndex(headers, ['description', 'ledger sub-account', 'financial type']);
+        const referenceIndex = findColumnIndex(headers, ['doc. number', 'account no.', 'reference']);
+        const accountHolderIndex = findColumnIndex(headers, ['account holder', 'patient details']);
+        const medicalSchemeIndex = findColumnIndex(headers, ['medical scheme', 'administrator']);
+        
+        console.log('Found columns - Amount:', amountIndex, 'Date:', dateIndex, 'Desc:', descIndex);
+        
+        if (amountIndex === -1 || dateIndex === -1 || descIndex === -1) {
+            console.warn('Missing required columns. Available headers:', headers);
+            return false;
+        }
+
+        const amountStr = String(row[amountIndex] || '0');
+        const dateStr = row[dateIndex];
+        const description = String(row[descIndex] || '').toUpperCase();
+        const reference = referenceIndex !== -1 ? String(row[referenceIndex] || '') : '';
+        const accountHolder = accountHolderIndex !== -1 ? String(row[accountHolderIndex] || '') : '';
+        const medicalScheme = medicalSchemeIndex !== -1 ? String(row[medicalSchemeIndex] || '') : '';
+
+        console.log('Raw data - Amount:', amountStr, 'Date:', dateStr, 'Desc:', description);
+
+        // Skip empty rows or rows with zero amount
+        if (!dateStr || !description || amountStr === '0') {
+            console.log('Skipping row - missing data or zero amount');
+            return false;
+        }
+
+        const date = parseDate(dateStr);
+        const amount = parseAmount(amountStr);
+
+        console.log('Parsed - Date:', date, 'Amount:', amount);
+
+        if (!date || amount === 0) {
+            console.log('Skipping row - invalid date or zero amount after parsing');
+            return false;
+        }
+
+        // Create enhanced description with more context
+        let enhancedDescription = description;
+        if (accountHolder) {
+            enhancedDescription += ` - ${accountHolder}`;
+        }
+        if (medicalScheme) {
+            enhancedDescription += ` [${medicalScheme}]`;
+        }
+
+        const transaction = {
+            date: date,
+            description: enhancedDescription,
+            originalDescription: description,
+            amount: Math.abs(amount), // Convert to positive for display
+            reference: reference,
+            accountHolder: accountHolder,
+            medicalScheme: medicalScheme,
+            accountGroup: mapToAccountGroup(description + ' ' + medicalScheme),
+            type: amount < 0 ? 'credit' : 'debit', // Negative amounts are credits (payments)
+            matched: false,
+            matchedTo: null
+        };
+        
+        console.log('Created transaction:', transaction);
+        state.data.accountTxns.push(transaction);
+        return true;
+    }
+
+    function processCreditRow(row, headers) {
+        const dateIndex = findColumnIndex(headers, ['date', 'payment date', 'transaction date', 'deposit date']);
+        const descIndex = findColumnIndex(headers, ['description', 'narration', 'details', 'payer', 'patient']);
+        const amountIndex = findColumnIndex(headers, ['amount', 'payment amount', 'credit', 'deposit']);
+        const referenceIndex = findColumnIndex(headers, ['reference', 'payment ref', 'receipt no']);
+        
+        if (dateIndex === -1 || descIndex === -1 || amountIndex === -1) {
+            console.warn('Missing required columns in credit data. Headers found:', headers);
+            return false;
+        }
+
+        const dateStr = row[dateIndex];
+        const description = String(row[descIndex] || '').toUpperCase();
+        const amountStr = String(row[amountIndex] || '0');
+        const reference = referenceIndex !== -1 ? String(row[referenceIndex] || '') : '';
+
+        if (!dateStr || !description) return false;
+
+        const date = parseDate(dateStr);
+        const amount = parseAmount(amountStr);
+
+        if (!date || amount === 0) return false;
+
+        const payment = {
+            date: date,
+            description: description,
+            amount: Math.abs(amount),
+            reference: reference,
+            accountGroup: mapToAccountGroup(description),
+            matched: false,
+            matchedTo: null
+        };
+        
+        state.data.creditPayments.push(payment);
+        return true;
+    }
+
+    function processAgeRow(row, headers) {
+        // Enhanced column detection for age analysis
+        const entityIndex = findColumnIndex(headers, ['account group', 'entity', 'account', 'debtor', 'customer', 'scheme', 'category']);
+        const countIndex = findColumnIndex(headers, ['count', 'number', 'invoices', 'items']);
+        const totalIndex = findColumnIndex(headers, ['total balance', 'total', 'amount', 'balance', 'outstanding']);
+        const currentIndex = findColumnIndex(headers, ['current', '0-30', '0 days', '0-30 days']);
+        const days30Index = findColumnIndex(headers, ['30', '31-60', '30 days', '30-60 days']);
+        const days60Index = findColumnIndex(headers, ['60', '61-90', '60 days', '60-90 days']);
+        const days90Index = findColumnIndex(headers, ['90', '91-120', '90 days', '90-120 days']);
+        const days120Index = findColumnIndex(headers, ['120', '121-150', '120 days', '120-150 days']);
+        const days150Index = findColumnIndex(headers, ['150', '150+', 'over 150', '150+ days']);
+        
+        if (entityIndex === -1 || totalIndex === -1) {
+            console.warn('Missing required columns in aging data. Headers found:', headers);
+            return false;
+        }
+
+        const entity = String(row[entityIndex] || '').trim();
+        if (!entity) return false;
+
+        // Parse amounts with better error handling
+        const count = countIndex !== -1 ? parseInt(row[countIndex] || '0') : 0;
+        const total = parseAmount(row[totalIndex] || '0');
+        const current = currentIndex !== -1 ? parseAmount(row[currentIndex] || '0') : 0;
+        const days30 = days30Index !== -1 ? parseAmount(row[days30Index] || '0') : 0;
+        const days60 = days60Index !== -1 ? parseAmount(row[days60Index] || '0') : 0;
+        const days90 = days90Index !== -1 ? parseAmount(row[days90Index] || '0') : 0;
+        const days120 = days120Index !== -1 ? parseAmount(row[days120Index] || '0') : 0;
+        const days150 = days150Index !== -1 ? parseAmount(row[days150Index] || '0') : 0;
+
+        // Validate data
+        if (total === 0) return false;
+
+        const agingRecord = {
+            entity: entity,
+            count: count,
+            total: total,
+            current: current,
+            days30: days30,
+            days60: days60,
+            days90: days90,
+            days120: days120,
+            days150: days150,
+            accountGroup: mapToAccountGroup(entity),
+            priority: calculatePriority(total, days120 + days150),
+            lastFollowUp: null,
+            status: 'Pending'
+        };
+        
+        state.data.ageAnalysis.push(agingRecord);
+        updateAccountGroups(agingRecord);
+        return true;
+    }
+
+    function processBankStatementData(data, filename) {
+        console.log(`Processing bank statement data from ${filename}:`, data);
+        
+        if (!data || data.length === 0) {
+            throw new Error('File is empty or contains no data');
+        }
+
+        // Clear previous bank data
+        state.data.bankStatements = [];
+
+        let processedRows = 0;
+        const headers = data[0] || [];
+        console.log('Bank statement headers:', headers);
+
+        for (let i = 1; i < data.length; i++) {
+            const row = data[i];
+            if (!row || row.length === 0) continue;
+
+            try {
+                if (processBankStatementRow(row, headers)) processedRows++;
+            } catch (error) {
+                console.warn('Skipping invalid bank statement row:', row, error);
+            }
+        }
+
+        console.log(`Processed ${processedRows} valid bank statement rows`);
+        
+        if (processedRows === 0) {
+            throw new Error('No valid bank statement data found. Please check file format.');
+        }
+
+        state.fileStatus.bank = true;
+        console.log('Final bank statement data:', state.data.bankStatements);
+    }
+
+    function processBankStatementRow(row, headers) {
+        const dateIndex = findColumnIndex(headers, ['date', 'transaction date', 'value date']);
+        const descIndex = findColumnIndex(headers, ['description', 'narration', 'details', 'particulars']);
+        const amountIndex = findColumnIndex(headers, ['amount', 'debit', 'credit', 'value']);
+        const referenceIndex = findColumnIndex(headers, ['reference', 'transaction ref', 'payment ref']);
+        const balanceIndex = findColumnIndex(headers, ['balance', 'running balance']);
+        
+        if (dateIndex === -1 || descIndex === -1 || amountIndex === -1) {
+            console.warn('Missing required columns in bank statement data');
+            return false;
+        }
+
+        const dateStr = row[dateIndex];
+        const description = String(row[descIndex] || '').toUpperCase();
+        const amountStr = String(row[amountIndex] || '0');
+        const reference = referenceIndex !== -1 ? String(row[referenceIndex] || '') : '';
+        const balance = balanceIndex !== -1 ? parseAmount(row[balanceIndex] || '0') : null;
+
+        if (!dateStr || !description) return false;
+
+        const date = parseDate(dateStr);
+        const amount = parseAmount(amountStr);
+
+        if (!date || amount === 0) return false;
+
+        const transaction = {
+            date: date,
+            description: description,
+            amount: amount,
+            reference: reference,
+            balance: balance,
+            type: amount > 0 ? 'credit' : 'debit',
+            accountGroup: mapToBankAccountGroup(description),
+            matched: false,
+            matchedTo: null
+        };
+        
+        state.data.bankStatements.push(transaction);
+        return true;
+    }
+
+    function findColumnIndex(headers, possibleNames) {
+        if (!headers || !Array.isArray(headers)) {
+            console.warn('Invalid headers array:', headers);
+            return -1;
+        }
+        
+        for (const name of possibleNames) {
+            const index = headers.findIndex(header => {
+                if (!header) return false;
+                const headerStr = String(header).toLowerCase().trim();
+                const nameStr = name.toLowerCase().trim();
+                return headerStr.includes(nameStr) || nameStr.includes(headerStr);
+            });
+            if (index !== -1) {
+                console.log(`Found column "${name}" at index ${index}`);
+                return index;
+            }
+        }
+        
+        console.log(`No column found for names: ${possibleNames.join(', ')}`);
+        // If no exact match found, try partial matching
+        for (const name of possibleNames) {
+            for (let i = 0; i < headers.length; i++) {
+                const header = headers[i];
+                if (header && String(header).toLowerCase().includes(name.toLowerCase())) {
+                    console.log(`Found partial match for "${name}" at index ${i}`);
+                    return i;
+                }
+            }
+        }
+        
+        return -1;
+    }
+
+    function parseDate(dateValue) {
+        if (!dateValue) return null;
+        
+        console.log('Parsing date:', dateValue, 'Type:', typeof dateValue);
+        
+        // Handle Excel serial dates (numbers)
+        if (typeof dateValue === 'number') {
+            const date = new Date((dateValue - 25569) * 86400 * 1000);
+            console.log('Excel serial date converted:', date);
+            return date;
+        }
+        
+        // Handle string dates - your format appears to be DD/MM/YYYY
+        const dateStr = String(dateValue).trim();
+        
+        // Try DD/MM/YYYY format (common in your data)
+        const parts = dateStr.split('/');
+        if (parts.length === 3) {
+            const day = parseInt(parts[0]);
+            const month = parseInt(parts[1]) - 1; // Months are 0-indexed
+            const year = parseInt(parts[2]);
+            
+            if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+                const date = new Date(year, month, day);
+                if (!isNaN(date.getTime())) {
+                    console.log('DD/MM/YYYY date parsed:', date);
+                    return date;
+                }
+            }
+        }
+        
+        // Try other common formats
+        let date = new Date(dateStr);
+        
+        if (isNaN(date.getTime())) {
+            // Try MM/DD/YYYY as fallback
+            const altParts = dateStr.split('/');
+            if (altParts.length === 3) {
+                date = new Date(altParts[2], altParts[0] - 1, altParts[1]);
+            }
+        }
+        
+        if (isNaN(date.getTime())) {
+            console.warn('Invalid date format:', dateValue);
+            return null;
+        }
+        
+        console.log('Date parsed successfully:', date);
+        return date;
+    }
+
+    function parseAmount(amountValue) {
+        if (!amountValue && amountValue !== 0) return 0;
+        
+        // Handle numbers directly
+        if (typeof amountValue === 'number') {
+            return Math.abs(amountValue);
+        }
+        
+        // Handle strings
+        const amountStr = String(amountValue)
+            .replace(/[^\d.-]/g, '') // Remove non-numeric characters except . and -
+            .replace(/,/g, ''); // Remove commas
+        
+        const amount = parseFloat(amountStr);
+        return isNaN(amount) ? 0 : Math.abs(amount);
+    }
+
+    function calculatePriority(totalAmount, overdueAmount) {
+        const overduePercentage = totalAmount > 0 ? (overdueAmount / totalAmount) * 100 : 0;
+        
+        if (overdueAmount > 5000 || overduePercentage > 50) return 'High';
+        if (overdueAmount > 1000 || overduePercentage > 25) return 'Medium';
+        return 'Low';
+    }
+
+    function updateAccountGroups(record) {
+        const group = record.accountGroup;
+        if (!state.data.accountGroups.has(group)) {
+            state.data.accountGroups.set(group, {
+                current: 0, days30: 0, days60: 0, days90: 0, days120: 0, days150: 0, total: 0
+            });
+        }
+        
+        const groupData = state.data.accountGroups.get(group);
+        groupData.current += record.current;
+        groupData.days30 += record.days30;
+        groupData.days60 += record.days60;
+        groupData.days90 += record.days90;
+        groupData.days120 += record.days120;
+        groupData.days150 += record.days150;
+        groupData.total += record.total;
+        
+        if (record.isMedicalAid) {
+            if (!state.data.medicalAidSchemes.has(record.entity)) {
+                state.data.medicalAidSchemes.set(record.entity, {
+                    current: 0, days30: 0, days60: 0, days90: 0, days120: 0, days150: 0, total: 0
+                });
+            }
+                
+            const schemeData = state.data.medicalAidSchemes.get(record.entity);
+            schemeData.current += record.current;
+            schemeData.days30 += record.days30;
+            schemeData.days60 += record.days60;
+            schemeData.days90 += record.days90;
+            schemeData.days120 += record.days120;
+            schemeData.days150 += record.days150;
+            schemeData.total += record.total;
+        }
+    }
+
+    function mapToAccountGroup(description) {
+        const desc = description.toUpperCase();
+        
+        // Check medical aids
+        for (const [key, value] of Object.entries(accountGroupConfig.medicalAids)) {
+            if (desc.includes(key)) return value;
+        }
+        
+        // Check aging groups
+        for (const [key, value] of Object.entries(accountGroupConfig.agingGroups)) {
+            if (desc.includes(key)) return value;
+        }
+        
+        // Check other groups
+        for (const [key, value] of Object.entries(accountGroupConfig.otherGroups)) {
+            if (desc.includes(key)) return value;
+        }
+        
+        return 'Other';
+    }
+
+    function mapToBankAccountGroup(description) {
+        const desc = description.toUpperCase();
+        
+        for (const [key, value] of Object.entries(accountGroupConfig.bankKeywords)) {
+            if (desc.includes(key)) return value;
+        }
+        
+        return 'Bank Transaction';
+    }
+
+    function isMedicalAid(description) {
+        const desc = description.toUpperCase();
+        return Object.keys(accountGroupConfig.medicalAids).some(key => desc.includes(key));
+    }
+
+    function updateFileStatus(type, fileCount) {
+        const statusElement = document.getElementById(`${type}FileStatus`);
+        const recordCount = getRecordCount(type);
+        statusElement.innerHTML = `<span class="text-green-400"><i class="fas fa-check-circle"></i> ${fileCount} file(s) - ${recordCount} records</span>`;
+    }
+
+    function getRecordCount(type) {
+        switch (type) {
+            case 'account': return state.data.accountTxns.length;
+            case 'credit': return state.data.creditPayments.length;
+            case 'age': return state.data.ageAnalysis.length;
+            case 'bank': return state.data.bankStatements.length;
+            default: return 0;
+        }
+    }
+
+    function updateDataStatus() {
+        const loadedFiles = Object.values(state.fileStatus).filter(Boolean).length;
+        const statusIndicator = document.getElementById('dataStatusIndicator');
+        const statusText = document.getElementById('dataStatusText');
+        
+        // Update status indicator
+        if (loadedFiles === 4) {
+            statusIndicator.className = 'w-3 h-3 rounded-full bg-green-500';
+            statusText.textContent = 'All Data Loaded';
+        } else if (loadedFiles > 0) {
+            statusIndicator.className = 'w-3 h-3 rounded-full bg-yellow-500';
+            statusText.textContent = `${loadedFiles}/4 Data Sources Loaded`;
+        } else {
+            statusIndicator.className = 'w-3 h-3 rounded-full bg-red-500';
+            statusText.textContent = 'Load Data to Begin';
+        }
+
+        // Update data counters
+        document.getElementById('accDataStatus').textContent = `${state.data.accountTxns.length} records`;
+        document.getElementById('creditDataStatus').textContent = `${state.data.creditPayments.length} records`;
+        document.getElementById('ageDataStatus').textContent = `${state.data.ageAnalysis.length} records`;
+        document.getElementById('bankDataStatus').textContent = `${state.data.bankStatements.length} records`;
+    }
+
+    function updateKPIs() {
+        // Revenue from account transactions
+        const revenue = state.data.accountTxns.reduce((sum, t) => sum + t.amount, 0);
+        document.getElementById('kpiRevenue').textContent = formatCurrency(revenue);
+        
+        // Payments from credit analysis
+        const payments = state.data.creditPayments.reduce((sum, p) => sum + p.amount, 0);
+        document.getElementById('kpiPayments').textContent = formatCurrency(payments);
+        
+        // Outstanding from age analysis
+        const outstanding = state.data.ageAnalysis.reduce((sum, a) => sum + a.total, 0);
+        document.getElementById('kpiOutstanding').textContent = formatCurrency(outstanding);
+        
+        // Collection rate
+        const collectionRate = revenue > 0 ? (payments / revenue) * 100 : 0;
+        document.getElementById('kpiCollectionRate').textContent = `${collectionRate.toFixed(1)}%`;
+    }
+
+    function updateAccountGroups() {
+        updateMedicalAidGroups();
+        updateOtherAccountGroups();
+    }
+
+    function updateMedicalAidGroups() {
+        const container = document.getElementById('medicalAidGroups');
+        container.innerHTML = '';
+        
+        const sortedSchemes = Array.from(state.data.medicalAidSchemes.entries())
+            .sort((a, b) => b[1].total - a[1].total);
+        
+        if (sortedSchemes.length === 0) {
+            container.innerHTML = '<div class="text-gray-400 text-sm">No medical aid data available</div>';
+            return;
+        }
+        
+        sortedSchemes.forEach(([scheme, data]) => {
+            const element = createAccountGroupElement(scheme, data);
+            container.appendChild(element);
+        });
+    }
+
+    function updateOtherAccountGroups() {
+        const container = document.getElementById('otherAccountGroups');
+        container.innerHTML = '';
+        
+        const otherGroups = Array.from(state.data.accountGroups.entries())
+            .filter(([group]) => !Object.values(accountGroupConfig.medicalAids).includes(group))
+            .sort((a, b) => b[1].total - a[1].total);
+        
+        if (otherGroups.length === 0) {
+            container.innerHTML = '<div class="text-gray-400 text-sm">No other account data available</div>';
+            return;
+        }
+        
+        otherGroups.forEach(([group, data]) => {
+            const element = createAccountGroupElement(group, data);
+            container.appendChild(element);
+        });
+    }
+
+    function createAccountGroupElement(name, data) {
+        const div = document.createElement('div');
+        div.className = 'bg-gray-800 rounded-lg p-3';
+        
+        const total = data.total;
+        const over90 = data.days90 + data.days120 + data.days150;
+        const over90Percent = total > 0 ? (over90 / total) * 100 : 0;
+        
+        div.innerHTML = `
+            <div class="flex justify-between items-start mb-2">
+                <span class="font-medium text-sm">${name}</span>
+                <span class="font-bold">${formatCurrency(total)}</span>
+            </div>
+            <div class="grid grid-cols-4 gap-1 text-xs mb-2">
+                <div class="text-center">
+                    <div class="text-green-400 font-semibold">Current</div>
+                    <div>${formatCurrency(data.current)}</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-yellow-400 font-semibold">30d</div>
+                    <div>${formatCurrency(data.days30)}</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-orange-400 font-semibold">60d</div>
+                    <div>${formatCurrency(data.days60)}</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-red-400 font-semibold">90d+</div>
+                    <div>${formatCurrency(over90)}</div>
+                </div>
+            </div>
+            ${over90Percent > 20 ? `
+                <div class="mt-2 text-xs text-red-400 bg-red-400/10 p-1 rounded text-center">
+                    <i class="fas fa-exclamation-triangle mr-1"></i> ${over90Percent.toFixed(1)}% over 90 days
+                </div>
+            ` : ''}
+        `;
+        
+        return div;
+    }
+
+    // Enhanced aging analysis functions
+    function updateAgingAnalysis() {
+        updateAgingKPIs();
+        updateAgingChart();
+        updatePrioritySummary();
+        updateImmediateActions();
+        updateAgingTable();
+        updateWeeklyWorkflow();
+    }
+
+    function updateAgingKPIs() {
+        const totalOutstanding = state.data.ageAnalysis.reduce((sum, a) => sum + a.total, 0);
+        const overdue90 = state.data.ageAnalysis.reduce((sum, a) => sum + a.days90 + a.days120 + a.days150, 0);
+        const overdue90Percent = totalOutstanding > 0 ? (overdue90 / totalOutstanding) * 100 : 0;
+        const highPriorityCount = state.data.ageAnalysis.filter(a => a.priority === 'High').length;
+        const totalAccounts = state.data.ageAnalysis.reduce((sum, a) => sum + a.count, 0);
+        
+        // Calculate collection rate based on payments vs aging
+        const totalPayments = state.data.creditPayments.reduce((sum, p) => sum + p.amount, 0);
+        const collectionRate = totalOutstanding > 0 ? 
+            (totalPayments / (totalOutstanding + totalPayments)) * 100 : 0;
+
+        document.getElementById('totalOutstanding').textContent = formatCurrency(totalOutstanding);
+        document.getElementById('overdue90').textContent = formatCurrency(overdue90);
+        document.getElementById('overdue90Percent').textContent = `${overdue90Percent.toFixed(1)}% of total`;
+        document.getElementById('highPriorityCount').textContent = highPriorityCount.toString();
+        document.getElementById('accountCount').textContent = `${totalAccounts} accounts`;
+        document.getElementById('agingCollectionRate').textContent = `${collectionRate.toFixed(1)}%`;
+    }
+
+    function updateAgingChart() {
+        const ctx = document.getElementById('agingChart');
+        if (!ctx) return;
+
+        // Destroy existing chart if it exists
+        if (window.agingChartInstance) {
+            window.agingChartInstance.destroy();
+        }
+
+        const totals = state.data.ageAnalysis.reduce((acc, item) => {
+            acc.current += item.current;
+            acc.days30 += item.days30;
+            acc.days60 += item.days60;
+            acc.days90 += item.days90;
+            acc.days120 += item.days120;
+            acc.days150 += item.days150;
+            return acc;
+        }, { current: 0, days30: 0, days60: 0, days90: 0, days120: 0, days150: 0 });
+
+        window.agingChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Current', '30 Days', '60 Days', '90 Days', '120 Days', '150+ Days'],
+                datasets: [{
+                    label: 'Amount Outstanding',
+                    data: [totals.current, totals.days30, totals.days60, totals.days90, totals.days120, totals.days150],
+                    backgroundColor: [
+                        '#10B981', '#3B82F6', '#F59E0B', '#F97316', '#EF4444', '#7C3AED'
+                    ],
+                    borderColor: [
+                        '#10B981', '#3B82F6', '#F59E0B', '#F97316', '#EF4444', '#7C3AED'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `R ${context.parsed.y.toLocaleString()}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return 'R ' + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function updatePrioritySummary() {
+        const container = document.getElementById('prioritySummary');
+        if (state.data.ageAnalysis.length === 0) {
+            container.innerHTML = '<div class="text-gray-400 text-sm">Load age analysis data to view</div>';
+            return;
+        }
+
+        const priorities = state.data.ageAnalysis.reduce((acc, item) => {
+            acc[item.priority] = (acc[item.priority] || 0) + 1;
+            return acc;
+        }, {});
+
+        const totalAmounts = state.data.ageAnalysis.reduce((acc, item) => {
+            acc[item.priority] = (acc[item.priority] || 0) + item.total;
+            return acc;
+        }, {});
+
+        container.innerHTML = `
+            <div class="space-y-3">
+                <div class="flex justify-between items-center p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                    <div>
+                        <div class="font-semibold text-red-400">High Priority</div>
+                        <div class="text-xs text-gray-400">${priorities.High || 0} accounts</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold">${formatCurrency(totalAmounts.High || 0)}</div>
+                        <div class="text-xs text-red-400">Immediate action</div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-between items-center p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+                    <div>
+                        <div class="font-semibold text-orange-400">Medium Priority</div>
+                        <div class="text-xs text-gray-400">${priorities.Medium || 0} accounts</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold">${formatCurrency(totalAmounts.Medium || 0)}</div>
+                        <div class="text-xs text-orange-400">This week</div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-between items-center p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                    <div>
+                        <div class="font-semibold text-green-400">Low Priority</div>
+                        <div class="text-xs text-gray-400">${priorities.Low || 0} accounts</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold">${formatCurrency(totalAmounts.Low || 0)}</div>
+                        <div class="text-xs text-green-400">Scheduled</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function updateImmediateActions() {
+        const container = document.getElementById('immediateAction');
+        const highPriorityItems = state.data.ageAnalysis
+            .filter(item => item.priority === 'High')
+            .sort((a, b) => b.total - a.total)
+            .slice(0, 5); // Show top 5
+
+        if (highPriorityItems.length === 0) {
+            container.innerHTML = '<div class="text-green-400 text-sm">No immediate actions required</div>';
+            return;
+        }
+
+        container.innerHTML = highPriorityItems.map(item => `
+            <div class="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <div class="font-medium text-sm">${item.entity}</div>
+                        <div class="text-xs text-gray-400">${item.accountGroup}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold">${formatCurrency(item.total)}</div>
+                        <div class="text-xs text-red-400">${item.count} accounts</div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-1 text-xs">
+                    <div class="text-center">
+                        <div class="text-orange-400">90+ Days</div>
+                        <div>${formatCurrency(item.days90 + item.days120 + item.days150)}</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-yellow-400">60-90 Days</div>
+                        <div>${formatCurrency(item.days60)}</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-green-400">Current</div>
+                        <div>${formatCurrency(item.current)}</div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function updateAgingTable() {
+        const tbody = document.getElementById('agingTableBody');
+        if (state.data.ageAnalysis.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center text-gray-400 py-4">Load age analysis data to view details</td></tr>';
+            return;
+        }
+
+        const sortedData = state.data.ageAnalysis.sort((a, b) => {
+            // Sort by priority (High first) then by total amount (descending)
+            const priorityOrder = { 'High': 3, 'Medium': 2, 'Low': 1 };
+            return (priorityOrder[b.priority] - priorityOrder[a.priority]) || (b.total - a.total);
+        });
+
+        tbody.innerHTML = sortedData.map(item => `
+            <tr class="hover:bg-gray-800/50">
+                <td class="font-medium">${item.entity}</td>
+                <td>${item.count}</td>
+                <td class="font-bold">${formatCurrency(item.total)}</td>
+                <td>${formatCurrency(item.current)}</td>
+                <td>${formatCurrency(item.days30)}</td>
+                <td>${formatCurrency(item.days60)}</td>
+                <td>${formatCurrency(item.days90)}</td>
+                <td>${formatCurrency(item.days120)}</td>
+                <td>${formatCurrency(item.days150)}</td>
+                <td>
+                    <span class="px-2 py-1 rounded-full text-xs ${
+                        item.priority === 'High' ? 'bg-red-500/20 text-red-400' :
+                        item.priority === 'Medium' ? 'bg-orange-500/20 text-orange-400' :
+                        'bg-green-500/20 text-green-400'
+                    }">
+                        ${item.priority}
+                    </span>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function updateWeeklyWorkflow() {
+        const container = document.getElementById('weeklyWorkflow');
+        const hasData = state.data.ageAnalysis.length > 0;
+        
+        const status = hasData ? 
+            '<span class="text-green-400 text-xs">Ready</span>' : 
+            '<span class="text-gray-400 text-xs">Pending Data</span>';
+
+        container.innerHTML = `
+            <div class="flex items-center justify-between p-3 bg-blue-500/10 rounded-lg">
+                <span>Monday: Export data & generate reports</span>
+                ${status}
+            </div>
+            <div class="flex items-center justify-between p-3 bg-blue-500/10 rounded-lg">
+                <span>Tuesday-Thursday: Follow-up actions</span>
+                ${hasData ? '<span class="text-yellow-400 text-xs">In Progress</span>' : '<span class="text-gray-400 text-xs">Pending</span>'}
+            </div>
+            <div class="flex items-center justify-between p-3 bg-blue-500/10 rounded-lg">
+                <span>Friday: Progress update & planning</span>
+                <span class="text-gray-400 text-xs">Pending</span>
+            </div>
+        `;
+    }
+
+    function exportAgingReport() {
+        if (state.data.ageAnalysis.length === 0) {
+            showToast('No aging data available', 'Load age analysis data first', 'warning');
+            return;
+        }
+
+        const report = {
+            timestamp: new Date().toISOString(),
+            summary: {
+                totalOutstanding: state.data.ageAnalysis.reduce((sum, a) => sum + a.total, 0),
+                totalAccounts: state.data.ageAnalysis.reduce((sum, a) => sum + a.count, 0),
+                overdue90: state.data.ageAnalysis.reduce((sum, a) => sum + a.days90 + a.days120 + a.days150, 0),
+                highPriorityCount: state.data.ageAnalysis.filter(a => a.priority === 'High').length
+            },
+            detailedAnalysis: state.data.ageAnalysis,
+            generatedBy: 'Finance Pro Dashboard',
+            exportDate: new Date().toLocaleDateString()
+        };
+
+        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `aging-analysis-report-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showToast('Aging report exported', 'Detailed aging analysis downloaded', 'success');
+    }
+
+    function printAgingReport() {
+        window.print();
+    }
+
+    // Payment matching functionality
+    function matchPaymentsToBankStatements() {
+        let matchesFound = 0;
+        
+        // Reset previous matches
+        state.data.creditPayments.forEach(payment => {
+            payment.matched = false;
+            payment.matchedTo = null;
+        });
+        
+        state.data.bankStatements.forEach(bankTx => {
+            bankTx.matched = false;
+            bankTx.matchedTo = null;
+        });
+
+        // Match by amount and date (exact match)
+        state.data.creditPayments.forEach(payment => {
+            if (payment.matched) return;
+            
+            const matchingBankTx = state.data.bankStatements.find(bankTx => 
+                !bankTx.matched &&
+                Math.abs(bankTx.amount - payment.amount) < 0.01 && // Exact amount match
+                Math.abs((bankTx.date - payment.date) / (1000 * 60 * 60 * 24)) < 2 && // Within 2 days
+                bankTx.type === 'credit'
+            );
+            
+            if (matchingBankTx) {
+                payment.matched = true;
+                payment.matchedTo = matchingBankTx.reference || 'Bank Statement';
+                matchingBankTx.matched = true;
+                matchingBankTx.matchedTo = payment.reference || 'Payment Record';
+                matchesFound++;
+            }
+        });
+
+        // Match by amount only (for cases where dates don't align perfectly)
+        state.data.creditPayments.forEach(payment => {
+            if (payment.matched) return;
+            
+            const matchingBankTx = state.data.bankStatements.find(bankTx => 
+                !bankTx.matched &&
+                Math.abs(bankTx.amount - payment.amount) < 0.01 &&
+                bankTx.type === 'credit'
+            );
+            
+            if (matchingBankTx) {
+                payment.matched = true;
+                payment.matchedTo = matchingBankTx.reference || 'Bank Statement';
+                matchingBankTx.matched = true;
+                matchingBankTx.matchedTo = payment.reference || 'Payment Record';
+                matchesFound++;
+            }
+        });
+
+        return matchesFound;
+    }
+
+    function runReconciliation() {
+        if (state.data.creditPayments.length === 0) {
+            showToast('No payment data available', 'Load credit analysis data first', 'warning');
+            return;
+        }
+        
+        if (state.data.bankStatements.length === 0) {
+            showToast('No bank statement data available', 'Load bank statements first', 'warning');
+            return;
+        }
+        
+        const matchesFound = matchPaymentsToBankStatements();
+        updateReconciliationDisplay();
+        
+        showToast(`Reconciliation complete`, `${matchesFound} matches found`, 'success');
+    }
+
+    function updateReconciliationDisplay() {
+        // Update KPIs
+        const totalPayments = state.data.creditPayments.reduce((sum, p) => sum + p.amount, 0);
+        const bankDeposits = state.data.bankStatements
+            .filter(tx => tx.type === 'credit')
+            .reduce((sum, tx) => sum + tx.amount, 0);
+        
+        const matchedPayments = state.data.creditPayments.filter(p => p.matched);
+        const matchRate = state.data.creditPayments.length > 0 ? 
+            (matchedPayments.length / state.data.creditPayments.length) * 100 : 0;
+        
+        document.getElementById('totalPayments').textContent = formatCurrency(totalPayments);
+        document.getElementById('bankDeposits').textContent = formatCurrency(bankDeposits);
+        document.getElementById('matchRate').textContent = `${matchRate.toFixed(1)}%`;
+        
+        // Update unmatched payments
+        const unmatchedPaymentsContainer = document.getElementById('unmatchedPayments');
+        const unmatchedPayments = state.data.creditPayments.filter(p => !p.matched);
+        
+        if (unmatchedPayments.length === 0) {
+            unmatchedPaymentsContainer.innerHTML = '<div class="text-green-400 text-sm">All payments matched!</div>';
+        } else {
+            unmatchedPaymentsContainer.innerHTML = unmatchedPayments.map(payment => `
+                <div class="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="font-medium text-sm">${payment.description}</div>
+                            <div class="text-xs text-gray-400">${payment.date.toLocaleDateString()}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold">${formatCurrency(payment.amount)}</div>
+                            <div class="text-xs text-red-400">Unmatched</div>
+                        </div>
+                    </div>
+                    ${payment.reference ? `<div class="text-xs mt-1">Ref: ${payment.reference}</div>` : ''}
+                </div>
+            `).join('');
+        }
+        
+        // Update unmatched bank transactions
+        const unmatchedBankContainer = document.getElementById('unmatchedBankTx');
+        const unmatchedBankTx = state.data.bankStatements
+            .filter(tx => !tx.matched && tx.type === 'credit');
+        
+        if (unmatchedBankTx.length === 0) {
+            unmatchedBankContainer.innerHTML = '<div class="text-green-400 text-sm">All bank transactions matched!</div>';
+        } else {
+            unmatchedBankContainer.innerHTML = unmatchedBankTx.map(tx => `
+                <div class="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="font-medium text-sm">${tx.description}</div>
+                            <div class="text-xs text-gray-400">${tx.date.toLocaleDateString()}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold">${formatCurrency(tx.amount)}</div>
+                            <div class="text-xs text-yellow-400">Unmatched</div>
+                        </div>
+                    </div>
+                    ${tx.reference ? `<div class="text-xs mt-1">Ref: ${tx.reference}</div>` : ''}
+                </div>
+            `).join('');
+        }
+    }
+
+    function exportReconciliationReport() {
+        const report = {
+            timestamp: new Date().toISOString(),
+            reconciliation: {
+                totalPayments: state.data.creditPayments.reduce((sum, p) => sum + p.amount, 0),
+                totalBankDeposits: state.data.bankStatements
+                    .filter(tx => tx.type === 'credit')
+                    .reduce((sum, tx) => sum + tx.amount, 0),
+                matchedPayments: state.data.creditPayments.filter(p => p.matched).length,
+                totalPaymentsCount: state.data.creditPayments.length,
+                matchRate: state.data.creditPayments.length > 0 ? 
+                    (state.data.creditPayments.filter(p => p.matched).length / state.data.creditPayments.length) * 100 : 0
+            },
+            unmatchedPayments: state.data.creditPayments.filter(p => !p.matched),
+            unmatchedBankTransactions: state.data.bankStatements.filter(tx => !tx.matched && tx.type === 'credit'),
+            matchedTransactions: state.data.creditPayments.filter(p => p.matched).map(payment => ({
+                payment: payment,
+                bankTransaction: state.data.bankStatements.find(tx => tx.matchedTo === (payment.reference || 'Payment Record'))
+            }))
+        };
+        
+        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `reconciliation-report-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showToast('Reconciliation report exported', 'Detailed matching report downloaded', 'success');
+    }
+
+    function switchTab(tabName) {
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+        
+        document.querySelectorAll('.tab-content').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.getElementById(tabName).classList.add('active');
+        
+        updateTabHeader(tabName);
+        state.currentTab = tabName;
+    }
+
+    function updateTabHeader(tabName) {
+        const titles = {
+            overview: 'Financial Overview',
+            revenue: 'Revenue Analysis',
+            payments: 'Payments Analysis',
+            aging: 'Aging Analysis & Collections',
+            reconciliation: 'Payment Reconciliation'
+        };
+        
+        const subtitles = {
+            overview: 'Complete practice financial intelligence',
+            revenue: 'Analyze income trends and sources',
+            payments: 'Track payments and receivables',
+            aging: 'Monitor outstanding debt aging and collections',
+            reconciliation: 'Match payments to bank deposits'
+        };
+        
+        document.getElementById('currentTabTitle').textContent = titles[tabName];
+        document.getElementById('currentTabSubtitle').textContent = subtitles[tabName];
+    }
+
+    function formatCurrency(amount) {
+        if (amount === 0) return 'R 0';
+        if (amount < 1000) return 'R ' + Math.round(amount);
+        return 'R ' + Math.round(amount).toLocaleString();
+    }
+
+    function showToast(message, subtext = '', type = 'info') {
+        const toast = document.getElementById('toast');
+        const icon = document.getElementById('toastIcon');
+        const toastMessage = document.getElementById('toastMessage');
+        const toastSubtext = document.getElementById('toastSubtext');
+
+        const icons = {
+            info: 'fa-info-circle text-blue-400',
+            success: 'fa-check-circle text-green-400',
+            warning: 'fa-exclamation-triangle text-yellow-400',
+            error: 'fa-times-circle text-red-400'
+        };
+
+        icon.className = `fas ${icons[type]}`;
+        toastMessage.textContent = message;
+        toastSubtext.textContent = subtext;
+
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 5000);
+    }
+
+    function loadSampleData() {
+        console.log('Loading sample data...');
+        
+        // Create comprehensive sample data
+        const sampleAccounts = [
+            ['Amount', 'Service date', 'Description', 'Doc. number', 'Account holder', 'Medical scheme'],
+            [-4010.2, '16/10/2025', 'Payment received: EFT: Medical scheme', 'DH', 'MARX PD MR (PETRUS DANIEL)', 'DISCOVERY'],
+            [-500, '01/10/2025', 'Payment received: EFT: Patient', 'BF1110', 'BRANDT A MS (ANICKA)', 'BONITAS'],
+            [-500, '07/10/2025', 'Payment received: EFT: Patient', 'BF1217', 'PRETORIUS J MAST (JUAN-JACQUES)', 'MOMENTUM'],
+            [-400, '24/10/2025', 'Payment received: EFT: Patient', 'BF1478', 'DE VRIES ME MRS (MARIA E)', 'UMVUZO'],
+            [-500, '27/10/2025', 'Payment received: EFT: Patient', 'BF1105', 'GROBLER JHP MR (JOHANNES HENDRIK PETRUS)', 'BONITAS']
+        ];
+
+        const sampleCredits = [
+            ['Date', 'Description', 'Amount'],
+            ['2023-10-01', 'DISCOVERY PAYMENT RECEIVED', 120000],
+            ['2023-10-02', 'BONITAS PAYMENT', 85000],
+            ['2023-10-03', 'CASH DEPOSIT', 15000],
+            ['2023-10-04', 'GEMS PAYMENT RECEIPT', 72000],
+            ['2023-10-05', 'MOMENTUM EFT', 65000]
+        ];
+
+        const sampleAging = [
+            ['Account Group', 'Count', 'Total Balance', 'Current', '30 Days', '60 Days', '90 Days', '120 Days', '150+ Days'],
+            ['PT LIABLE COPAY', 45, 85200.00, 15230.00, 12450.00, 18760.00, 14320.00, 9840.00, 14600.00],
+            ['COID', 8, 56450.50, 8200.00, 6750.00, 12300.50, 9850.00, 7150.00, 12200.00],
+            ['PMB', 28, 187340.75, 45680.25, 32150.50, 38760.00, 28450.00, 22300.00, 20000.00],
+            ['AFS FOLLOW UP', 12, 92180.30, 12500.00, 15680.30, 18900.00, 16250.00, 14850.00, 14000.00]
+        ];
+
+        const sampleBank = [
+            ['Date', 'Description', 'Amount', 'Reference'],
+            ['2023-10-01', 'DISCOVERY HEALTH EFT', 120000, 'EFT12345'],
+            ['2023-10-02', 'BONITAS MEDICAL AID', 85000, 'EFT12346'],
+            ['2023-10-03', 'CASH DEPOSIT', 15000, 'CASH001'],
+            ['2023-10-04', 'GEMS PAYMENT', 72000, 'EFT12347'],
+            ['2023-10-05', 'MOMENTUM HEALTH', 65000, 'EFT12348']
+        ];
+
+        try {
+            // Process sample data
+            processFileData(sampleAccounts, 'account', 'sample-accounts.xlsx');
+            processFileData(sampleCredits, 'credit', 'sample-credits.xlsx');
+            processFileData(sampleAging, 'age', 'sample-aging.xlsx');
+            processBankStatementData(sampleBank, 'sample-bank.xlsx');
+
+            // Update UI
+            updateFileStatus('account', 1);
+            updateFileStatus('credit', 1);
+            updateFileStatus('age', 1);
+            updateFileStatus('bank', 1);
+            updateDataStatus();
+            updateKPIs();
+            updateAccountGroups();
+            updateAgingAnalysis();
+            updateReconciliationDisplay();
+
+            showToast('Sample data loaded successfully', 'Complete dashboard is now functional with sample data', 'success');
+            console.log('Sample data loaded successfully. Account transactions:', state.data.accountTxns.length);
+            
+        } catch (error) {
+            console.error('Error loading sample data:', error);
+            showToast('Error loading sample data', error.message, 'error');
+        }
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle('light-theme');
+        showToast('Theme changed', 'Interface theme updated', 'info');
+    }
+
+    function exportDashboard() {
+        const report = {
+            timestamp: new Date().toISOString(),
+            practice: 'MedPractice Inc.',
+            data: {
+                accountTxns: state.data.accountTxns,
+                creditPayments: state.data.creditPayments,
+                ageAnalysis: state.data.ageAnalysis,
+                bankStatements: state.data.bankStatements,
+                accountGroups: Object.fromEntries(state.data.accountGroups),
+                medicalAidSchemes: Object.fromEntries(state.data.medicalAidSchemes)
+            }
+        };
+        
+        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `financial-dashboard-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showToast('Dashboard exported', 'Financial data downloaded as JSON', 'success');
+    }
+
+    function printDashboard() {
+        window.print();
+    }
+
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('./sw.js')
+                .then(function(registration) {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                })
+                .catch(function(error) {
+                    console.log('ServiceWorker registration failed: ', error);
+                });
+        });
+    }
+
+    // Test function for your specific file format
+    function testWithFernandesData() {
+        // Simulate your file structure for testing
+        const testData = [
+            ['Amount', 'Service date', 'Description', 'Doc. number', 'Account holder', 'Medical scheme'],
+            [-4010.2, '16/10/2025', 'Payment received: EFT: Medical scheme', 'DH', 'MARX PD MR (PETRUS DANIEL)', 'DISCOVERY'],
+            [-500, '01/10/2025', 'Payment received: EFT: Patient', 'BF1110', 'BRANDT A MS (ANICKA)', 'BONITAS']
+        ];
+        
+        console.log('Testing with Fernandes data format...');
+        processFileData(testData, 'account', 'test-fernandes.xlsx');
+        updateDataStatus();
+        updateKPIs();
+    }
+</script>
+// ----------------------
+// 🧠 Persistent State Init
+// ----------------------
+document.addEventListener('DOMContentLoaded', () => {
+    const savedTab = localStorage.getItem('currentTab');
+    if (savedTab) {
+        switchTab(savedTab);
+    }
+
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-theme');
+        updateThemeIcon('light');
+    } else {
+        updateThemeIcon('dark');
+    }
+});
+
+// 🧠 Save Tab Change
+function switchTab(tabName) {
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.getElementById(tabName).classList.add('active');
+    state.currentTab = tabName;
+    localStorage.setItem('currentTab', tabName);
+
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.getAttribute('data-tab') === tabName) {
+            item.classList.add('active');
+        }
+    });
+
+    document.getElementById('currentTabTitle').textContent = getTabTitle(tabName);
+    document.getElementById('currentTabSubtitle').textContent = getTabSubtitle(tabName);
+}
+
+function getTabTitle(tab) {
+    const titles = {
+        overview: 'Financial Overview',
+        revenue: 'Revenue Analysis',
+        payments: 'Payments Analysis',
+        aging: 'Aging & Collections',
+        reconciliation: 'Reconciliation',
+    };
+    return titles[tab] || 'Finance Dashboard';
+}
+
+function getTabSubtitle(tab) {
+    const subtitles = {
+        overview: 'Complete practice financial intelligence',
+        revenue: 'Revenue metrics and breakdown',
+        payments: 'Credit and payment performance',
+        aging: 'Outstanding balances and follow-ups',
+        reconciliation: 'Match payments to bank statements',
+    };
+    return subtitles[tab] || '';
+}
+
+<!-- Summary Block -->
+<div class="glass-card fade-in p-6 mb-6">
+    <h3 class="font-bold mb-4">Quick Data Summary</h3>
+    <ul id="summaryList" class="space-y-2 text-sm text-gray-300 list-disc list-inside">
+        <li>Waiting for data...</li>
+    </ul>
+</div>
+
+function displaySummary(items) {
+    // Toast update
+    const toast = document.getElementById('toast');
+    const icon = document.getElementById('toastIcon');
+    const message = document.getElementById('toastMessage');
+    const subtext = document.getElementById('toastSubtext');
+
+    icon.className = 'fas fa-chart-pie text-yellow-400';
+    message.textContent = 'Quick Summary';
+    subtext.innerHTML = items.map(i => `• ${i}`).join('<br>');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 10000);
+
+    // Update dashboard block
+    const summaryList = document.getElementById('summaryList');
+    if (summaryList) {
+        summaryList.innerHTML = ''; // Clear old
+        items.forEach(line => {
+            const li = document.createElement('li');
+            li.textContent = line;
+            summaryList.appendChild(li);
+        });
+    }
+}
+
+
+async function exportDashboard() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'pt', 'a4');
+
+    const target = document.querySelector('.main-content');
+
+    // Scroll to top to ensure full capture
+    window.scrollTo(0, 0);
+
+    showToast('Exporting...', 'Generating PDF Report');
+
+    await html2canvas(target, {
+        scale: 2,
+        useCORS: true
+    }).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const imgProps = doc.getImageProperties(imgData);
+        const pdfWidth = doc.internal.pageSize.getWidth();
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+        doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        doc.save('Finance_Dashboard_Report.pdf');
+
+        showToast('Download Ready', 'Dashboard PDF exported', 'success');
+    }).catch(err => {
+        console.error(err);
+        showToast('Export Failed', err.message, 'error');
+    });
+}
+function runReconciliation() {
+    const matches = [];
+
+    state.data.creditPayments.forEach(payment => {
+        const match = state.data.bankStatements.find(tx => {
+            const amountMatch = Math.abs(tx.amount - payment.amount) < 1; // within 1 cent
+            const dateDiff = Math.abs(new Date(tx.date) - new Date(payment.date)) / (1000 * 60 * 60 * 24);
+            const dateClose = dateDiff <= 3;
+            const refMatch = tx.reference && payment.reference && tx.reference.includes(payment.reference);
+
+            return amountMatch && dateClose && refMatch;
+        });
+
+        if (match) {
+            matches.push({ payment, match });
+            generateInvoice(payment, match);
+        }
+    });
+
+    console.log(`🔎 Found ${matches.length} matching transactions.`);
+    showToast('Reconciliation Complete', `${matches.length} invoices generated`);
+}
+
+function generateInvoice(payment, bankTx) {
+    const invoiceHTML = `
+        <h1>Payment Invoice</h1>
+        <p><strong>Payer:</strong> ${payment.description}</p>
+        <p><strong>Date:</strong> ${new Date(payment.date).toLocaleDateString()}</p>
+        <p><strong>Amount:</strong> ${formatCurrency(payment.amount)}</p>
+        <p><strong>Bank Ref:</strong> ${bankTx.reference}</p>
+        <p><strong>Status:</strong> Matched</p>
+    `;
+
+    const win = window.open('', '_blank');
+    win.document.write(`
+        <html>
+        <head><title>Invoice</title></head>
+        <body style="font-family: Arial; padding: 20px;">${invoiceHTML}</body>
+        </html>
+    `);
+    win.document.close();
+}
+<button onclick="runReconciliation()" class="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700">
+    <i class="fas fa-sync-alt mr-2"></i>Match & Create Invoices
+</button>
+<div class="glass-card p-6">
+    <h3 class="font-bold mb-4 text-blue-400">
+        <i class="fas fa-hand-pointer mr-2"></i>Manual Match Tool
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <h4 class="font-semibold mb-2">Bank Transactions</h4>
+            <ul id="manualBankList" class="space-y-2 text-sm max-h-64 overflow-y-auto bg-gray-800 rounded p-2"></ul>
+        </div>
+        <div>
+            <h4 class="font-semibold mb-2">Credit Payments</h4>
+            <ul id="manualPaymentList" class="space-y-2 text-sm max-h-64 overflow-y-auto bg-gray-800 rounded p-2"></ul>
+        </div>
+    </div>
+    <button onclick="matchManually()" id="matchBtn" disabled class="mt-4 bg-green-600 hover:bg-green-700 px-4 py-2 rounded disabled:opacity-50">
+        <i class="fas fa-link mr-1"></i>Match Selected
+    </button>
+</div>
+

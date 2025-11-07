@@ -1,0 +1,24 @@
+{
+  "name": "Practice Finance Pro",
+  "short_name": "FinancePro",
+  "description": "Complete financial dashboard for medical practices with aging analysis",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0F172A",
+  "theme_color": "#3B82F6",
+  "orientation": "any",
+  "scope": "/",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDI1NiAyNTYiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjI1NiIgaGVpZ2h0PSIyNTYiIGZpbGw9IiMzYjgyZjYiIHJ4PSI0MCIvPjxwYXRoIGQ9Ik0xMjggNDhDMTQxLjI1IDQ4IDE1MiA1OC43NSAxNTIgNzJWMTA0SDE2OEMxODEuMyAxMDQgMTkyIDExNC43IDE5MiAxMjhDMTkyIDE0MS4zIDE4MS4zIDE1MiAxNjggMTUySDE1MlYxODRDMTUyIDE5Ny4zIDE0MS4zIDIwOCAxMjggMjA4QzExNC43IDIwOCAxMDQgMTk3LjMgMTA0IDE4NFYxNTJIODhDNzQuNyAxNTIgNjQgMTQxLjMgNjQgMTI4QzY0IDExNC43IDc0LjcgMTA0IDg4IDEwNEgxMDRWNzJDMTA0IDU4Ljc1IDExNC43NSA0OCAxMjggNDhaIiBmaWxsPSJ3aGl0ZSIvPjwvc3ZnPg==",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDI1NiAyNTYiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjI1NiIgaGVpZ2h0PSIyNTYiIGZpbGw9IiMzYjgyZjYiIHJ4PSI0MCIvPjxwYXRoIGQ9Ik0xMjggNDhDMTQxLjI1IDQ4IDE1MiA1OC43NSAxNTIgNzJWMTA0SDE2OEMxODEuMyAxMDQgMTkyIDExNC43IDE5MiAxMjhDMTkyIDE0MS4zIDE4MS4zIDE1MiAxNjggMTUySDE1MlYxODRDMTUyIDE5Ny4zIDE0MS4zIDIwOCAxMjggMjA4QzExNC43IDIwOCAxMDQgMTk3LjMgMTA0IDE4NFYxNTJIODhDNzQuNyAxNTIgNjQgMTQxLjMgNjQgMTI4QzY0IDExNC43IDc0LjcgMTA0IDg4IDEwNEgxMDRWNzJDMTA0IDU4Ljc1IDExNC43NSA0OCAxMjggNDhaIiBmaWxsPSJ3aGl0ZSIvPjwvc3ZnPg==",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
