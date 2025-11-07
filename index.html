@@ -3911,9 +3911,9 @@ summarizeData();
         const clientEmail = emailInput.value.trim();
 
         bankTx.matched = true;
-        bankTx.matchedTo = payment.description;
+        bankTx.matchedTo = payment.reference || 'Payment Record';
         payment.matched = true;
-        payment.matchedTo = bankTx.reference || bankTx.description;
+        payment.matchedTo = bankTx.reference || 'Bank Statement';
 
         try {
             if (typeof saveMatchAndEmail === 'function') {
