@@ -285,38 +285,6 @@
                 <span class="text-sm" id="dataStatusText">Load Data to Begin</span>
             </div>
         </div>
-<div class="manual-match-form">
-  <label>Email</label>
-  <input type="email" id="clientEmailInput" placeholder="client@example.com" class="input-style" />
-
-  <button onclick="matchManually()" class="btn btn-green">
-    <i class="fas fa-link"></i> Match & Email
-  </button>
-</div>
-function matchManually() {
-  const clientEmail = document.getElementById('clientEmailInput').value;
-  if (!selectedBankTx || !selectedPayment || !clientEmail) {
-    alert("⚠️ Please select both items and enter client email");
-    return;
-  }
-
-  selectedBankTx.matched = true;
-  selectedPayment.matched = true;
-
-  saveMatchAndEmail(selectedPayment, selectedBankTx, clientEmail);
-
-  selectedBankTx = null;
-  selectedPayment = null;
-  loadManualMatchingLists();
-// Save HTML invoice
-const invoicePath = path.join(__dirname, 'invoices', `invoice-${matchId}.html`);
-fs.writeFileSync(invoicePath, invoiceHtml);
-const invoiceLink = `${process.env.INVOICE_BASE_URL}/invoice-${matchId}.html`;
-
-}
-
-
-
         <div class="p-4">
             <!-- Navigation -->
             <h3 class="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">Dashboards</h3>
@@ -798,6 +766,7 @@ const invoiceLink = `${process.env.INVOICE_BASE_URL}/invoice-${matchId}.html`;
         </div>
     </div>
 
+    <script src="matchModule.js"></script>
     <script>
         // Global state
         const state = {
@@ -3809,6 +3778,158 @@ summarizeData();
                 </div>
             `).join('');
         }
+
+        loadManualMatchingLists();
+    }
+
+    let selectedBankTxIndex = null;
+    let selectedPaymentIndex = null;
+
+    function loadManualMatchingLists() {
+        const bankList = document.getElementById('manualBankList');
+        const paymentList = document.getElementById('manualPaymentList');
+
+        if (!bankList || !paymentList) {
+            return;
+        }
+
+        const availableBankItems = state.data.bankStatements
+            .map((tx, index) => ({ tx, index }))
+            .filter(({ tx }) => !tx.matched && tx.type === 'credit');
+
+        const availablePaymentItems = state.data.creditPayments
+            .map((payment, index) => ({ payment, index }))
+            .filter(({ payment }) => !payment.matched);
+
+        if (!availableBankItems.some(item => item.index === selectedBankTxIndex)) {
+            selectedBankTxIndex = null;
+        }
+
+        if (!availablePaymentItems.some(item => item.index === selectedPaymentIndex)) {
+            selectedPaymentIndex = null;
+        }
+
+        bankList.innerHTML = availableBankItems.length
+            ? availableBankItems.map(({ tx, index }) => `
+                <li data-index="${index}" class="p-2 rounded border border-transparent cursor-pointer transition hover:border-blue-500/40">
+                    <div class="flex justify-between text-sm">
+                        <span class="font-medium">${tx.description}</span>
+                        <span>${formatCurrency(tx.amount)}</span>
+                    </div>
+                    <div class="text-xs text-gray-400 flex justify-between">
+                        <span>${tx.date.toLocaleDateString()}</span>
+                        ${tx.reference ? `<span>Ref: ${tx.reference}</span>` : ''}
+                    </div>
+                </li>
+            `).join('')
+            : '<li class="text-xs text-gray-400">No unmatched bank transactions</li>';
+
+        paymentList.innerHTML = availablePaymentItems.length
+            ? availablePaymentItems.map(({ payment, index }) => `
+                <li data-index="${index}" class="p-2 rounded border border-transparent cursor-pointer transition hover:border-blue-500/40">
+                    <div class="flex justify-between text-sm">
+                        <span class="font-medium">${payment.description}</span>
+                        <span>${formatCurrency(payment.amount)}</span>
+                    </div>
+                    <div class="text-xs text-gray-400 flex justify-between">
+                        <span>${payment.date.toLocaleDateString()}</span>
+                        ${payment.reference ? `<span>Ref: ${payment.reference}</span>` : ''}
+                    </div>
+                </li>
+            `).join('')
+            : '<li class="text-xs text-gray-400">No unmatched payments</li>';
+
+        Array.from(bankList.children).forEach(item => {
+            const index = Number(item.dataset.index);
+            if (Number.isNaN(index)) return;
+            item.addEventListener('click', () => selectManualBankTx(index));
+        });
+
+        Array.from(paymentList.children).forEach(item => {
+            const index = Number(item.dataset.index);
+            if (Number.isNaN(index)) return;
+            item.addEventListener('click', () => selectManualPayment(index));
+        });
+
+        const emailInput = document.getElementById('clientEmailInput');
+        if (emailInput && !emailInput.dataset.manualListenerAttached) {
+            emailInput.addEventListener('input', updateManualMatchButtonState);
+            emailInput.dataset.manualListenerAttached = 'true';
+        }
+
+        updateManualSelectionStyles('manualBankList', selectedBankTxIndex);
+        updateManualSelectionStyles('manualPaymentList', selectedPaymentIndex);
+        updateManualMatchButtonState();
+    }
+
+    function updateManualSelectionStyles(listId, selectedIndex) {
+        const list = document.getElementById(listId);
+        if (!list) return;
+
+        Array.from(list.children).forEach(item => {
+            const index = Number(item.dataset.index);
+            const isSelected = !Number.isNaN(index) && index === selectedIndex;
+            item.classList.toggle('ring-2', isSelected);
+            item.classList.toggle('ring-blue-500', isSelected);
+            item.classList.toggle('bg-blue-500/10', isSelected);
+        });
+    }
+
+    function selectManualBankTx(index) {
+        selectedBankTxIndex = selectedBankTxIndex === index ? null : index;
+        updateManualSelectionStyles('manualBankList', selectedBankTxIndex);
+        updateManualMatchButtonState();
+    }
+
+    function selectManualPayment(index) {
+        selectedPaymentIndex = selectedPaymentIndex === index ? null : index;
+        updateManualSelectionStyles('manualPaymentList', selectedPaymentIndex);
+        updateManualMatchButtonState();
+    }
+
+    function updateManualMatchButtonState() {
+        const matchBtn = document.getElementById('matchBtn');
+        const emailInput = document.getElementById('clientEmailInput');
+        if (!matchBtn) return;
+
+        const hasSelections = selectedBankTxIndex !== null && selectedPaymentIndex !== null;
+        const hasEmail = emailInput ? emailInput.value.trim().length > 0 : false;
+
+        matchBtn.disabled = !(hasSelections && hasEmail);
+    }
+
+    async function matchManually() {
+        const emailInput = document.getElementById('clientEmailInput');
+        const bankTx = selectedBankTxIndex !== null ? state.data.bankStatements[selectedBankTxIndex] : null;
+        const payment = selectedPaymentIndex !== null ? state.data.creditPayments[selectedPaymentIndex] : null;
+
+        if (!bankTx || !payment || !emailInput || !emailInput.value.trim()) {
+            alert('⚠️ Please select a payment, a bank transaction, and provide a client email.');
+            return;
+        }
+
+        const clientEmail = emailInput.value.trim();
+
+        bankTx.matched = true;
+        bankTx.matchedTo = payment.reference || 'Payment Record';
+        payment.matched = true;
+        payment.matchedTo = bankTx.reference || 'Bank Statement';
+
+        try {
+            if (typeof saveMatchAndEmail === 'function') {
+                await saveMatchAndEmail(payment, bankTx, clientEmail);
+            }
+            showToast('Manual match saved', `Invoice sent to ${clientEmail}`, 'success');
+        } catch (error) {
+            console.error('Failed to send invoice email', error);
+            showToast('Match saved, email failed', error.message || 'Unable to send invoice email', 'warning');
+        }
+
+        selectedBankTxIndex = null;
+        selectedPaymentIndex = null;
+        emailInput.value = '';
+
+        updateReconciliationDisplay();
     }
 
     function exportReconciliationReport() {
@@ -4220,8 +4341,14 @@ function generateInvoice(payment, bankTx) {
             <ul id="manualPaymentList" class="space-y-2 text-sm max-h-64 overflow-y-auto bg-gray-800 rounded p-2"></ul>
         </div>
     </div>
-    <button onclick="matchManually()" id="matchBtn" disabled class="mt-4 bg-green-600 hover:bg-green-700 px-4 py-2 rounded disabled:opacity-50">
-        <i class="fas fa-link mr-1"></i>Match Selected
-    </button>
+    <div class="mt-4 grid gap-2 md:grid-cols-[1fr_auto] items-end">
+        <div>
+            <label for="clientEmailInput" class="block text-xs uppercase tracking-wide text-gray-400 mb-1">Client Email</label>
+            <input type="email" id="clientEmailInput" placeholder="client@example.com" class="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <button onclick="matchManually()" id="matchBtn" disabled class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded disabled:opacity-50">
+            <i class="fas fa-link mr-1"></i>Match &amp; Email
+        </button>
+    </div>
 </div>
 
